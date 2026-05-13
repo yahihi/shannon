@@ -20,5 +20,6 @@ export {
   type QueryOptions,
   type QueryParams,
   type ShannonMessage,
+  type ShannonQuery,
   type ShannonUserMessage,
 } from "@dexh/shannon";
