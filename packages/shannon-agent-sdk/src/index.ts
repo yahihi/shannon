@@ -1,4 +1,5 @@
 export {
+  forkSession,
   getSessionInfo,
   getSessionMessages,
   listSessions,
@@ -27,6 +28,8 @@ export {
   shannonUserMessageSchema,
   type QueryOptions,
   type QueryParams,
+  type ForkSessionOptions,
+  type ForkSessionResult,
   type ListSessionsOptions,
   type SessionLookupOptions,
   type ShannonMessage,

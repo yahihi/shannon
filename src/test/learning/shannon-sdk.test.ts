@@ -14,6 +14,7 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
+  forkSession,
   getSessionInfo,
   getSessionMessages,
   listSessions,
@@ -282,6 +283,14 @@ test("reads local Claude session transcripts through SDK helpers", async () => {
     });
     await expect(listSessions({ dir, home, limit: 1 })).resolves.toMatchObject([
       { sessionId },
+    ]);
+
+    await expect(forkSession(sessionId, { dir, home, sessionId: "session-fork" })).resolves.toEqual({
+      sessionId: "session-fork",
+    });
+    await expect(getSessionMessages("session-fork", { dir, home })).resolves.toMatchObject([
+      { sessionId: "session-fork" },
+      { sessionId: "session-fork" },
     ]);
   } finally {
     await rm(home, { recursive: true, force: true });

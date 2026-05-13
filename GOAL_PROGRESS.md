@@ -164,6 +164,8 @@ Agent SDK parity still have documented gaps.
   `interrupt()` and `close()` methods wired to subprocess cancellation.
 - SDK local session helpers: `getSessionMessages()`, `getSessionInfo()`, and
   `listSessions()` read Claude transcript files for local session inspection.
+- SDK local `forkSession()` copies a transcript to a new session id and rewrites
+  persisted session id fields.
 - Zod schemas for current Shannon SDK message rows, native rate-limit event,
   selected additional Agent SDK stream/control variants, option, and query
   parameter validation.
@@ -234,7 +236,8 @@ Agent SDK parity still have documented gaps.
   - warm query / prewarmed process behavior
   - custom process spawning
 - SDK session helpers are local transcript-backed only; they do not implement
-  Agent SDK custom `SessionStore` plumbing.
+  Agent SDK custom `SessionStore` plumbing, file-history snapshots, or subagent
+  fork semantics.
 - full interruption API parity beyond SDK `interrupt()`/`close()` subprocess
   cancellation
 - Full resume/fork semantics still need broader edge-case testing:

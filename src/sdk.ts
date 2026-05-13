@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { basename, join, resolve } from "node:path";
 import { z } from "zod";
 
@@ -93,6 +94,14 @@ export type SessionLookupOptions = {
 export type ListSessionsOptions = SessionLookupOptions & {
   limit?: number;
   offset?: number;
+};
+
+export type ForkSessionOptions = SessionLookupOptions & {
+  sessionId?: string;
+};
+
+export type ForkSessionResult = {
+  sessionId: string;
 };
 
 export type ShannonSessionInfo = {
@@ -445,6 +454,25 @@ export async function listSessions(options: ListSessionsOptions = {}): Promise<S
   return infos.slice(offset, limit === undefined ? undefined : offset + limit);
 }
 
+export async function forkSession(
+  sessionId: string,
+  options: ForkSessionOptions = {},
+): Promise<ForkSessionResult> {
+  const transcriptPath = await transcriptPathForSession(sessionId, options);
+  if (!transcriptPath) throw new Error(`Session ${sessionId} not found`);
+
+  const forkSessionId = options.sessionId ?? randomUUID();
+  const forkPath = join(transcriptPath.slice(0, -basename(transcriptPath).length), `${forkSessionId}.jsonl`);
+  if (await Bun.file(forkPath).exists()) {
+    throw new Error(`Fork session ${forkSessionId} already exists`);
+  }
+
+  const rows = await readJsonlFile(transcriptPath);
+  const forkedRows = rows.map((row) => rewriteSessionIds(row, forkSessionId));
+  await Bun.write(forkPath, `${forkedRows.map((row) => JSON.stringify(row)).join("\n")}\n`);
+  return { sessionId: forkSessionId };
+}
+
 export async function* parseJsonlStream(stream: ReadableStream<Uint8Array>): AsyncIterable<ShannonMessage> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
@@ -467,6 +495,13 @@ export async function* parseJsonlStream(stream: ReadableStream<Uint8Array>): Asy
   if (buffer.trim()) {
     yield JSON.parse(buffer) as ShannonMessage;
   }
+}
+
+function rewriteSessionIds(row: ShannonMessage, sessionId: string): ShannonMessage {
+  const copy = structuredClone(row) as ShannonMessage;
+  if ("sessionId" in copy) copy.sessionId = sessionId;
+  if ("session_id" in copy) copy.session_id = sessionId;
+  return copy;
 }
 
 function projectKeyForDir(dir: string): string {
