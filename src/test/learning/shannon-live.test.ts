@@ -514,4 +514,42 @@ runLive("live Shannon conformance", () => {
       "shannon live sdk session two",
     );
   }, 120_000);
+
+  test("SDK query supports continue and fork session options", async () => {
+    const baseMessages = await collectSdkLiveMessages(
+      "Reply with exactly: shannon live sdk fork base",
+      {},
+    );
+    const baseSessionId = baseMessages.at(-1)?.session_id;
+    expect(typeof baseSessionId).toBe("string");
+
+    const continuedMessages = await collectSdkLiveMessages(
+      "Reply with exactly: shannon live sdk continue child",
+      { continue: true },
+    );
+    expect(continuedMessages.at(-1)).toMatchObject({
+      type: "shannon_session",
+      subtype: "metadata",
+      session_id: baseSessionId,
+    });
+    expect(textFromMessage(continuedMessages.find((message) => message.type === "assistant"))).toBe(
+      "shannon live sdk continue child",
+    );
+
+    const forkSessionId = randomUUID();
+    const forkMessages = await collectSdkLiveMessages(
+      "Reply with exactly: shannon live sdk fork child",
+      { resume: baseSessionId, forkSession: true, sessionId: forkSessionId },
+    );
+
+    expect(forkMessages.at(-1)).toMatchObject({
+      type: "shannon_session",
+      subtype: "metadata",
+      session_id: forkSessionId,
+    });
+    expect(forkSessionId).not.toBe(baseSessionId);
+    expect(textFromMessage(forkMessages.find((message) => message.type === "assistant"))).toBe(
+      "shannon live sdk fork child",
+    );
+  }, 180_000);
 });
