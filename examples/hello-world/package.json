@@ -6,6 +6,6 @@
     "start": "bun run hello.ts"
   },
   "dependencies": {
-    "@dexh/shannon": "^0.0.2"
+    "@dexh/shannon": "0.0.2"
   }
 }
