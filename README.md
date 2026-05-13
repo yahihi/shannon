@@ -36,7 +36,7 @@ which shannon
 shannon -p "Reply with exactly: hello" --output-format=stream-json --verbose
 ```
 
-Stdin JSONL input is supported for the first user message:
+Finite stdin JSONL input is supported for one or more user messages:
 
 ```sh
 printf '%s\n' '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"Reply with exactly: hello"}]},"parent_tool_use_id":null,"session_id":""}' \
@@ -69,7 +69,7 @@ for await (const message of query({
 }
 ```
 
-Async input is also accepted for the first user message:
+Async input is also accepted for finite user-message streams:
 
 ```ts
 import { query, type ShannonUserMessage } from "@humanlayer/shannon";
@@ -89,6 +89,16 @@ async function* messages(): AsyncIterable<ShannonUserMessage> {
 for await (const message of query({ prompt: messages() })) {
   console.log(JSON.stringify(message));
 }
+```
+
+Queries accept an `AbortController` in options; aborting it terminates the
+underlying Shannon subprocess.
+
+The SDK also exports zod schemas for the current Shannon message, options, and
+query parameter surface:
+
+```ts
+import { shannonMessageSchema, shannonQueryOptionsSchema } from "@humanlayer/shannon";
 ```
 
 The SDK facade shells out to the `shannon` executable and parses JSONL stdout into an async iterable.

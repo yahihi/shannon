@@ -18,7 +18,7 @@ Core:
 - `--output-format=stream-json`
 - `--output-format=json`
 - `--output-format=text`
-- `--input-format=stream-json` for the first user message from stdin
+- `--input-format=stream-json` for finite user messages from stdin
 - `--verbose`
 - `--replay-user-messages`
 
@@ -85,8 +85,8 @@ Session/control flags accepted and forwarded to the underlying interactive
   submitting the prompt in Claude's input box.
 - `--output-format=json` and `--output-format=text` should not emit the extra
   stream rows or final Shannon metadata row; those are stream-json-only.
-- The initial `--input-format=stream-json` implementation supports the first
-  stdin user message and `--replay-user-messages`.
+- The current `--input-format=stream-json` implementation supports finite
+  multi-turn stdin user messages and `--replay-user-messages`.
 
 ## Known Gaps
 
@@ -99,8 +99,8 @@ Session/control flags accepted and forwarded to the underlying interactive
 - Native costs are not persisted in a directly equivalent transcript row, so
   synthesized `result.total_cost_usd` and `modelUsage.*.costUSD` remain `0`.
 - Full bidi `--input-format=stream-json` is not implemented yet. Shannon's
-  current CLI and SDK support the first stdin/async user message, then complete
-  a single turn.
+  current CLI and SDK support finite stdin/async user messages, sent
+  sequentially through one interactive session.
 - Programmatic permission callbacks, MCP SDK server instances, hook callback
   functions, custom process spawning, warm query sessions, and session stores
   require an in-process SDK runtime, not just CLI flag forwarding.
@@ -110,8 +110,13 @@ Session/control flags accepted and forwarded to the underlying interactive
 - Unit-level conformance tests cover argument parsing, SDK option-to-flag
   mapping, transcript row translation, JSONL parsing, and metadata shape.
 - Live smoke tests compare the real `shannon -p ... --output-format=stream-json
-  --verbose` path against the expected JSONL event sequence and verify tmux
-  cleanup.
+  --verbose` path and finite multi-turn stdin path against the expected JSONL
+  contract and verify tmux cleanup.
+- Unit tests cover signal exit-code mapping and pre-start SDK abort behavior.
+- A redacted native `claude -p --model haiku --output-format=stream-json
+  --verbose` fixture captures the current native event family:
+  `hook_started`, `hook_response`, rich `init`, assistant chunks,
+  `rate_limit_event`, and `result`.
 - Future parity work should add fixtures from native `claude -p` for each flag
   family and assert Shannon either matches the row shape or documents the
   transcript limitation.

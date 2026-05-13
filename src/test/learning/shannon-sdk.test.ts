@@ -10,13 +10,23 @@
  *   from the executable.
  */
 import { expect, test } from "bun:test";
-import { optionsToCliArgs, parseJsonlStream } from "../../sdk";
+import {
+  optionsToCliArgs,
+  parseJsonlStream,
+  query,
+  shannonMessageSchema,
+  shannonQueryOptionsSchema,
+  shannonQueryParamsSchema,
+  shannonUserMessageSchema,
+} from "../../sdk";
 
 test("parses jsonl messages even when chunks split object boundaries", async () => {
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
       const encoder = new TextEncoder();
-      controller.enqueue(encoder.encode('{"type":"system","subtype":"init"}\n{"type"'));
+      controller.enqueue(
+        encoder.encode('{"type":"system","subtype":"init"}\n{"type"'),
+      );
       controller.enqueue(encoder.encode(':"result","subtype":"success"}\n'));
       controller.close();
     },
@@ -37,10 +47,12 @@ test("maps SDK options onto Shannon CLI flags", () => {
   expect(
     optionsToCliArgs({
       additionalDirectories: ["/tmp/a", "/tmp/b"],
-      model: "sonnet",
+      model: "haiku",
       permissionMode: "plan",
       allowedTools: ["Read", "Grep"],
-      agents: { reviewer: { description: "Reviews", prompt: "Review carefully" } },
+      agents: {
+        reviewer: { description: "Reviews", prompt: "Review carefully" },
+      },
       debug: "api",
       settings: { permissions: { defaultMode: "auto" } },
       continue: true,
@@ -61,10 +73,65 @@ test("maps SDK options onto Shannon CLI flags", () => {
     "api",
     "--include-hook-events",
     "--model",
-    "sonnet",
+    "haiku",
     "--permission-mode",
     "plan",
     "--settings",
     '{"permissions":{"defaultMode":"auto"}}',
   ]);
+});
+
+test("honors an already-aborted SDK query before spawning Shannon", async () => {
+  const abortController = new AbortController();
+  abortController.abort();
+
+  const iterator = query({
+    prompt: "hello",
+    options: { abortController },
+  })[Symbol.asyncIterator]();
+
+  await expect(iterator.next()).rejects.toThrow("Shannon query aborted before start");
+});
+
+test("exports zod schemas for the current SDK surface", () => {
+  expect(
+    shannonUserMessageSchema.parse({
+      type: "user",
+      message: {
+        role: "user",
+        content: [{ type: "text", text: "hello" }],
+      },
+      parent_tool_use_id: null,
+    }),
+  ).toMatchObject({
+    type: "user",
+    message: { role: "user" },
+  });
+
+  expect(shannonMessageSchema.parse({ type: "result", session_id: "session-1" })).toEqual({
+    type: "result",
+    session_id: "session-1",
+  });
+
+  expect(
+    shannonQueryOptionsSchema.parse({
+      outputFormat: "stream-json",
+      permissionMode: "plan",
+      model: "haiku",
+    }),
+  ).toEqual({
+    outputFormat: "stream-json",
+    permissionMode: "plan",
+    model: "haiku",
+  });
+
+  expect(
+    shannonQueryParamsSchema.parse({
+      prompt: "hello",
+      options: { verbose: true },
+    }),
+  ).toEqual({
+    prompt: "hello",
+    options: { verbose: true },
+  });
 });

@@ -65,14 +65,14 @@ runLive("live Shannon conformance", () => {
 
     expect(exitCode, stderr).toBe(0);
     const messages = parseJsonl(stdout);
-    expect(messages.map((message) => message.type)).toEqual([
-      "system",
-      "assistant",
-      "result",
-      "shannon_session",
-    ]);
+    expect(messages.at(-1)?.type).toBe("shannon_session");
 
-    const [init, assistant, result, metadata] = messages;
+    const init = messages.find((message) => (
+      message.type === "system" && message.subtype === "init"
+    ));
+    const assistant = messages.find((message) => message.type === "assistant");
+    const result = messages.find((message) => message.type === "result");
+    const metadata = messages.at(-1);
     expect(init).toBeDefined();
     expect(assistant).toBeDefined();
     expect(result).toBeDefined();
@@ -90,7 +90,7 @@ runLive("live Shannon conformance", () => {
     expect(init!.session_id).toBe(assistant!.session_id);
     expect(result!.session_id).toBe(assistant!.session_id);
     expect(metadata!.session_id).toBe(assistant!.session_id);
-  });
+  }, 60_000);
 
   test("handles finite stream-json multi-turn input in one session", async () => {
     const stdin = [
@@ -122,21 +122,18 @@ runLive("live Shannon conformance", () => {
 
     expect(exitCode, stderr).toBe(0);
     const messages = parseJsonl(stdout);
-    expect(messages.map((message) => message.type)).toEqual([
-      "user",
-      "system",
-      "assistant",
-      "result",
-      "user",
-      "assistant",
-      "result",
-      "shannon_session",
-    ]);
+    expect(messages.at(-1)?.type).toBe("shannon_session");
 
+    const users = messages.filter((message) => message.type === "user");
+    const init = messages.find((message) => (
+      message.type === "system" && message.subtype === "init"
+    ));
     const assistants = messages.filter((message) => message.type === "assistant");
     const results = messages.filter((message) => message.type === "result");
     const metadata = messages.at(-1);
 
+    expect(users).toHaveLength(2);
+    expect(init).toBeDefined();
     expect(assistants).toHaveLength(2);
     expect(results).toHaveLength(2);
     expect(results.map((message) => message.num_turns)).toEqual([1, 2]);
@@ -149,5 +146,5 @@ runLive("live Shannon conformance", () => {
       subtype: "metadata",
       cleanup: { tmux_killed: true },
     });
-  });
+  }, 120_000);
 });

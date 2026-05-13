@@ -14,6 +14,7 @@ import {
   parseArgs,
   promptFromUserMessage,
   projectKeyForCwd,
+  signalExitCode,
   textFromContent,
   toSdkAssistant,
   toSdkHookResponse,
@@ -99,6 +100,11 @@ test("finds required local executables before launching Claude", async () => {
     claude: expect.stringContaining("claude"),
     tmux: expect.stringContaining("tmux"),
   });
+});
+
+test("maps termination signals to conventional shell exit codes", () => {
+  expect(signalExitCode("SIGINT")).toBe(130);
+  expect(signalExitCode("SIGTERM")).toBe(143);
 });
 
 test("maps cwd to Claude's project transcript folder", () => {
@@ -200,6 +206,7 @@ test("synthesizes init from transcript metadata when available", () => {
       [
         { type: "attachment", version: "2.1.140" },
         { type: "user", permissionMode: "auto" },
+        { type: "assistant", message: { role: "assistant", model: "claude-test" } },
       ],
     ),
   ).toMatchObject({
@@ -207,6 +214,7 @@ test("synthesizes init from transcript metadata when available", () => {
     subtype: "init",
     cwd: "/repo",
     session_id: "session-1",
+    model: "claude-test",
     permissionMode: "auto",
     claude_code_version: "2.1.140",
   });

@@ -58,6 +58,8 @@ type SessionDiscovery = {
   rows: TranscriptRow[];
 };
 
+type ShutdownSignal = "SIGINT" | "SIGTERM";
+
 type AssistantDiscovery = {
   row: TranscriptRow;
   rows: TranscriptRow[];
@@ -308,6 +310,7 @@ export function toSdkHookResponse(row: TranscriptRow): JsonRecord | undefined {
 export function toSdkInit(meta: SessionMetadata, rows: TranscriptRow[]): JsonRecord {
   const userRow = rows.find((row) => row.type === "user");
   const versionedRow = rows.find((row) => typeof row.version === "string");
+  const assistantRow = rows.find((row) => typeof row.message?.model === "string");
 
   return {
     type: "system",
@@ -316,7 +319,7 @@ export function toSdkInit(meta: SessionMetadata, rows: TranscriptRow[]): JsonRec
     session_id: meta.sessionId,
     tools: [],
     mcp_servers: [],
-    model: "unknown",
+    model: assistantRow?.message?.model ?? "unknown",
     permissionMode: typeof userRow?.permissionMode === "string" ? userRow.permissionMode : "unknown",
     claude_code_version: typeof versionedRow?.version === "string" ? versionedRow.version : undefined,
     uuid: randomUUID(),
@@ -407,10 +410,34 @@ export async function runShannon(options: CliOptions) {
   const projectFolder = claudeProjectFolder(options.cwd);
   const before = await listTranscriptPaths(projectFolder);
   const startedAt = Date.now();
-  const prompts = options.prompt ? [options.prompt] : await readPromptsFromStdin(options.inputFormat);
+  const prompts = options.prompt
+    ? asyncIterableFromArray([options.prompt])
+    : readPromptsFromStdin(options.inputFormat);
   let meta: SessionMetadata | undefined;
   let transcriptRowCount = 0;
   let cleanup: JsonRecord = { tmux_killed: false };
+  let promptReady = false;
+  let promptCount = 0;
+  let cleanupStarted = false;
+  let metadataEmitted = false;
+
+  const cleanupOnce = async () => {
+    if (cleanupStarted) return cleanup;
+    cleanupStarted = true;
+    cleanup = await killTmux(tmuxSession);
+    return cleanup;
+  };
+
+  const emitMetadataOnce = () => {
+    if (!meta || metadataEmitted || options.outputFormat !== "stream-json") return;
+    metadataEmitted = true;
+    emitJson(toShannonMetadata(meta, cleanup));
+  };
+
+  const disposeSignalHandlers = installSignalHandlers({
+    cleanup: cleanupOnce,
+    emitMetadata: emitMetadataOnce,
+  });
 
   try {
     await runCommand([
@@ -425,16 +452,23 @@ export async function runShannon(options: CliOptions) {
       ...options.claudeArgs,
     ]);
     await waitForPrompt(tmuxSession);
+    promptReady = true;
 
-    for (let index = 0; index < prompts.length; index += 1) {
-      const prompt = prompts[index];
+    for await (const prompt of prompts) {
       if (!prompt) continue;
+      promptCount += 1;
+
+      if (!promptReady) {
+        await waitForPrompt(tmuxSession);
+        promptReady = true;
+      }
 
       if (options.replayUserMessages && options.outputFormat === "stream-json") {
         emitJson(toUserReplay(prompt));
       }
 
       await sendPrompt(tmuxSession, prompt);
+      promptReady = false;
 
       if (!meta) {
         const discovery = await waitForSessionWithPrompt(
@@ -463,19 +497,60 @@ export async function runShannon(options: CliOptions) {
         transcriptRowCount,
       );
       transcriptRowCount = assistant.rows.length;
-      const result = toSdkResult(assistant.row, startedAt, index + 1);
+      const result = toSdkResult(assistant.row, startedAt, promptCount);
       emitOutput(options.outputFormat, [toSdkAssistant(assistant.row), result]);
+    }
 
-      if (index < prompts.length - 1) {
-        await waitForPrompt(tmuxSession);
-      }
+    if (promptCount === 0) {
+      throw new Error("Expected at least one user message on stdin for --input-format=stream-json");
     }
   } finally {
-    cleanup = await killTmux(tmuxSession);
-    if (meta && options.outputFormat === "stream-json") {
-      emitJson(toShannonMetadata(meta, cleanup));
-    }
+    disposeSignalHandlers();
+    cleanup = await cleanupOnce();
+    emitMetadataOnce();
   }
+}
+
+export function signalExitCode(signal: ShutdownSignal) {
+  return signal === "SIGINT" ? 130 : 143;
+}
+
+function installSignalHandlers({
+  cleanup,
+  emitMetadata,
+}: {
+  cleanup: () => Promise<JsonRecord>;
+  emitMetadata: () => void;
+}) {
+  let shuttingDown = false;
+
+  const handler = (signal: ShutdownSignal) => {
+    if (shuttingDown) return;
+    shuttingDown = true;
+
+    cleanup()
+      .then(() => {
+        emitMetadata();
+      })
+      .catch((error) => {
+        process.stderr.write(
+          `Failed to clean up Shannon tmux session after ${signal}: ${
+            error instanceof Error ? error.message : String(error)
+          }\n`,
+        );
+      })
+      .finally(() => {
+        process.exit(signalExitCode(signal));
+      });
+  };
+
+  process.once("SIGINT", handler);
+  process.once("SIGTERM", handler);
+
+  return () => {
+    process.off("SIGINT", handler);
+    process.off("SIGTERM", handler);
+  };
 }
 
 export async function validateRuntime() {
@@ -495,22 +570,48 @@ export async function validateRuntime() {
   return { claude, tmux };
 }
 
-async function readPromptsFromStdin(inputFormat: "text" | "stream-json"): Promise<string[]> {
-  const stdin = await Bun.stdin.text();
-  if (inputFormat === "text") return [stdin.trimEnd()].filter(Boolean);
+async function* asyncIterableFromArray(values: string[]): AsyncIterable<string> {
+  for (const value of values) yield value;
+}
 
-  const prompts: string[] = [];
-  for (const line of stdin.split("\n")) {
+async function* readPromptsFromStdin(inputFormat: "text" | "stream-json"): AsyncIterable<string> {
+  if (inputFormat === "text") {
+    const stdin = await Bun.stdin.text();
+    const prompt = stdin.trimEnd();
+    if (prompt) yield prompt;
+    return;
+  }
+
+  for await (const line of readStdinLines()) {
     if (!line.trim()) continue;
     const prompt = promptFromUserMessage(JSON.parse(line) as JsonRecord);
-    if (prompt) prompts.push(prompt);
+    if (prompt) yield prompt;
+  }
+}
+
+async function* readStdinLines(initialText?: string): AsyncIterable<string> {
+  if (initialText !== undefined) {
+    yield* initialText.split("\n");
+    return;
   }
 
-  if (prompts.length === 0) {
-    throw new Error("Expected at least one user message on stdin for --input-format=stream-json");
+  const reader = Bun.stdin.stream().getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) yield line;
   }
 
-  return prompts;
+  buffer += decoder.decode();
+  if (buffer) yield buffer;
 }
 
 async function waitForSessionWithPrompt(

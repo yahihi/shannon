@@ -1,3 +1,5 @@
+import { z } from "zod";
+
 export type ShannonMessage = Record<string, unknown> & {
   type: string;
   session_id?: string;
@@ -48,12 +50,84 @@ export type QueryOptions = {
   tools?: string[];
   dangerouslySkipPermissions?: boolean;
   allowDangerouslySkipPermissions?: boolean;
+  abortController?: AbortController;
 };
 
 export type QueryParams = {
   prompt: string | AsyncIterable<ShannonUserMessage>;
   options?: QueryOptions;
 };
+
+export const shannonTextBlockSchema = z.object({
+  type: z.literal("text"),
+  text: z.string(),
+}).catchall(z.unknown());
+
+export const shannonUserMessageSchema = z.object({
+  type: z.literal("user"),
+  message: z.object({
+    role: z.literal("user"),
+    content: z.union([z.string(), z.array(shannonTextBlockSchema)]),
+  }).catchall(z.unknown()),
+  parent_tool_use_id: z.string().nullable().optional(),
+  session_id: z.string().optional(),
+  uuid: z.string().optional(),
+}).catchall(z.unknown());
+
+export const shannonMessageSchema = z.object({
+  type: z.string(),
+  session_id: z.string().optional(),
+  uuid: z.string().optional(),
+}).catchall(z.unknown());
+
+export const shannonOutputFormatSchema = z.enum(["stream-json", "json", "text"]);
+
+export const shannonQueryOptionsSchema = z.object({
+  command: z.string().optional(),
+  cwd: z.string().optional(),
+  verbose: z.boolean().optional(),
+  outputFormat: shannonOutputFormatSchema.optional(),
+  replayUserMessages: z.boolean().optional(),
+  additionalDirectories: z.array(z.string()).optional(),
+  agent: z.string().optional(),
+  agents: z.record(z.string(), z.unknown()).optional(),
+  allowedTools: z.array(z.string()).optional(),
+  appendSystemPrompt: z.string().optional(),
+  betas: z.array(z.string()).optional(),
+  continue: z.boolean().optional(),
+  debug: z.union([z.boolean(), z.string()]).optional(),
+  debugFile: z.string().optional(),
+  disallowedTools: z.array(z.string()).optional(),
+  effort: z.enum(["low", "medium", "high", "xhigh", "max"]).optional(),
+  fallbackModel: z.string().optional(),
+  forkSession: z.boolean().optional(),
+  includeHookEvents: z.boolean().optional(),
+  includePartialMessages: z.boolean().optional(),
+  maxBudgetUsd: z.number().optional(),
+  mcpConfig: z.array(z.string()).optional(),
+  model: z.string().optional(),
+  name: z.string().optional(),
+  permissionMode: z.enum(["acceptEdits", "auto", "bypassPermissions", "default", "dontAsk", "plan"]).optional(),
+  resume: z.union([z.string(), z.boolean()]).optional(),
+  sessionId: z.string().optional(),
+  settings: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
+  systemPrompt: z.string().optional(),
+  tools: z.array(z.string()).optional(),
+  dangerouslySkipPermissions: z.boolean().optional(),
+  allowDangerouslySkipPermissions: z.boolean().optional(),
+  abortController: z.instanceof(AbortController).optional(),
+}).strict();
+
+export const shannonQueryParamsSchema = z.object({
+  prompt: z.union([
+    z.string(),
+    z.custom<AsyncIterable<ShannonUserMessage>>(
+      (value) => Boolean(value && typeof value === "object" && Symbol.asyncIterator in value),
+      "Expected an async iterable of Shannon user messages",
+    ),
+  ]),
+  options: shannonQueryOptionsSchema.optional(),
+}).strict();
 
 export function query({ prompt, options = {} }: QueryParams): AsyncIterable<ShannonMessage> {
   return runQuery(prompt, options);
@@ -98,6 +172,11 @@ async function* runQuery(
     ...(options.replayUserMessages ? ["--replay-user-messages"] : []),
     ...optionsToCliArgs(options),
   ];
+  const signal = options.abortController?.signal;
+
+  if (signal?.aborted) {
+    throw new Error("Shannon query aborted before start");
+  }
 
   const proc = Bun.spawn(args, {
     cwd: options.cwd,
@@ -105,18 +184,29 @@ async function* runQuery(
     stdout: "pipe",
     stderr: "pipe",
   });
+  const abortHandler = () => {
+    proc.kill("SIGTERM");
+  };
+  signal?.addEventListener("abort", abortHandler, { once: true });
   const stderrPromise = new Response(proc.stderr).text();
   const stdinPromise = isStreamingInput
     ? writeStreamingInput(proc.stdin, prompt)
     : Promise.resolve();
 
-  for await (const message of parseJsonlStream(proc.stdout)) {
-    yield message;
-  }
+  try {
+    for await (const message of parseJsonlStream(proc.stdout)) {
+      yield message;
+    }
 
-  const [exitCode, stderr] = await Promise.all([proc.exited, stderrPromise, stdinPromise]);
-  if (exitCode !== 0) {
-    throw new Error(`shannon exited with ${exitCode}${stderr.trim() ? `: ${stderr.trim()}` : ""}`);
+    const [exitCode, stderr] = await Promise.all([proc.exited, stderrPromise, stdinPromise]);
+    if (signal?.aborted) {
+      throw new Error("Shannon query aborted");
+    }
+    if (exitCode !== 0) {
+      throw new Error(`shannon exited with ${exitCode}${stderr.trim() ? `: ${stderr.trim()}` : ""}`);
+    }
+  } finally {
+    signal?.removeEventListener("abort", abortHandler);
   }
 }
 
