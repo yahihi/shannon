@@ -553,6 +553,7 @@ export async function runShannon(options: CliOptions) {
         emitJson(toUserReplay(prompt));
       }
 
+      const promptSentAt = Date.now();
       await sendPrompt(tmuxSession, prompt);
       promptReady = false;
 
@@ -563,6 +564,7 @@ export async function runShannon(options: CliOptions) {
           tmuxSession,
           options.cwd,
           prompt,
+          promptSentAt,
         );
         meta = discovery.meta;
         transcriptRowCount = 0;
@@ -733,16 +735,19 @@ async function waitForSessionWithPrompt(
   tmuxSession: string,
   cwd: string,
   prompt: string,
+  promptSentAt: number,
 ): Promise<SessionDiscovery> {
   const startedAt = Date.now();
 
   while (Date.now() - startedAt < START_TIMEOUT_MS) {
     const paths = await listTranscriptPaths(projectFolder);
     const fresh = [...paths].filter((path) => !before.has(path)).sort();
+    const existing = [...paths].filter((path) => before.has(path)).sort();
+    const candidates = [...fresh, ...existing];
 
-    for (const transcriptPath of fresh) {
+    for (const transcriptPath of candidates) {
       const rows = await readTranscript(transcriptPath);
-      const hasPrompt = rows.some((row) => row.type === "user" && row.message?.content === prompt);
+      const hasPrompt = rows.some((row) => rowContainsPromptAfter(row, prompt, promptSentAt, !before.has(transcriptPath)));
       if (!hasPrompt) continue;
 
       const sessionId = basename(transcriptPath).replace(/\.jsonl$/, "");
@@ -759,6 +764,18 @@ async function waitForSessionWithPrompt(
   throw new Error(
     `Timed out waiting for Claude transcript containing the submitted prompt in ${projectFolder}\n\nCaptured tmux pane:\n${pane}`,
   );
+}
+
+export function rowContainsPromptAfter(
+  row: TranscriptRow,
+  prompt: string,
+  promptSentAt: number,
+  allowMissingTimestamp = false,
+) {
+  if (row.type !== "user" || row.message?.content !== prompt) return false;
+  if (typeof row.timestamp !== "string") return allowMissingTimestamp;
+  const timestamp = Date.parse(row.timestamp);
+  return Number.isFinite(timestamp) && timestamp >= promptSentAt - 1_000;
 }
 
 async function waitForPrompt(tmuxSession: string) {

@@ -15,6 +15,7 @@ import {
   parseArgs,
   promptFromUserMessage,
   projectKeyForCwd,
+  rowContainsPromptAfter,
   signalExitCode,
   textFromContent,
   toSdkAssistant,
@@ -116,6 +117,46 @@ test("maps cwd to Claude's project transcript folder", () => {
   expect(claudeProjectFolder("/repo", "/home/test")).toBe(
     "/home/test/.claude/projects/-repo",
   );
+});
+
+test("matches resumed transcript prompts by timestamp", () => {
+  const promptSentAt = Date.parse("2026-05-13T20:00:00.000Z");
+
+  expect(
+    rowContainsPromptAfter(
+      {
+        type: "user",
+        timestamp: "2026-05-13T20:00:00.500Z",
+        message: { role: "user", content: "resume prompt" },
+      },
+      "resume prompt",
+      promptSentAt,
+    ),
+  ).toBe(true);
+
+  expect(
+    rowContainsPromptAfter(
+      {
+        type: "user",
+        timestamp: "2026-05-13T19:59:00.000Z",
+        message: { role: "user", content: "resume prompt" },
+      },
+      "resume prompt",
+      promptSentAt,
+    ),
+  ).toBe(false);
+
+  expect(
+    rowContainsPromptAfter(
+      {
+        type: "user",
+        message: { role: "user", content: "resume prompt" },
+      },
+      "resume prompt",
+      promptSentAt,
+      true,
+    ),
+  ).toBe(true);
 });
 
 test("extracts text from Anthropic content blocks", () => {

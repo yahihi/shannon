@@ -178,4 +178,45 @@ runLive("live Shannon conformance", () => {
       costUSD: expect.any(Number),
     });
   }, 60_000);
+
+  test("resumes an existing session by id", async () => {
+    const first = await runShannonLive([
+      "-p",
+      "Reply with exactly: shannon live resume one",
+      "--model",
+      "haiku",
+      "--output-format=stream-json",
+      "--verbose",
+    ]);
+
+    expect(first.exitCode, first.stderr).toBe(0);
+    const firstMessages = parseJsonl(first.stdout);
+    const metadata = firstMessages.at(-1);
+    expect(metadata).toMatchObject({ type: "shannon_session", subtype: "metadata" });
+    const sessionId = metadata?.session_id;
+    expect(typeof sessionId).toBe("string");
+
+    const second = await runShannonLive([
+      "--resume",
+      sessionId as string,
+      "-p",
+      "Reply with exactly: shannon live resume two",
+      "--model",
+      "haiku",
+      "--output-format=stream-json",
+      "--verbose",
+    ]);
+
+    expect(second.exitCode, second.stderr).toBe(0);
+    const secondMessages = parseJsonl(second.stdout);
+    expect(secondMessages.at(-1)).toMatchObject({
+      type: "shannon_session",
+      subtype: "metadata",
+      session_id: sessionId,
+    });
+    expect(secondMessages.find((message) => message.type === "assistant")).toMatchObject({
+      type: "assistant",
+      session_id: sessionId,
+    });
+  }, 120_000);
 });

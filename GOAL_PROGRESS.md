@@ -63,8 +63,8 @@ Agent SDK parity still have documented gaps.
 ## Verification Performed
 
 - `bun test`
-  - Passes: 22 tests.
-  - Skips: 3 live tests unless `SHANNON_LIVE=1`.
+  - Passes: 23 tests.
+  - Skips: 4 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
 - `bun pm pack --dry-run`
@@ -72,10 +72,10 @@ Agent SDK parity still have documented gaps.
 - `cd packages/shannon-agent-sdk && bun pm pack --dry-run`
   - Passes for `@humanlayer/shannon-agent-sdk`.
 - `SHANNON_LIVE=1 bun test src/test/learning/shannon-live.test.ts`
-  - Passes: 3 live tests.
+  - Passes: 4 live tests.
   - Covers single-turn stream JSON and finite multi-turn stream JSON in one
-    session, JSON array output, nonzero cost fields, session consistency,
-    result turns, metadata, and tmux cleanup.
+    session, JSON array output, nonzero cost fields, resume by session id,
+    session consistency, result turns, metadata, and tmux cleanup.
 - Native fixture:
   - `src/test/fixtures/claude-p-haiku-stream-json.fixture.jsonl`
   - `src/test/fixtures/claude-p-haiku-json.fixture.json`
@@ -104,6 +104,8 @@ Agent SDK parity still have documented gaps.
 - SIGINT/SIGTERM cleanup for the active tmux session.
 - prompt-bound transcript discovery to avoid attaching to another concurrent
   Shannon run in the same cwd.
+- timestamp-aware transcript discovery for resumed sessions that append to an
+  existing transcript file.
 - transcript row translation for assistant rows and hook success attachments.
 - synthesized `system/hook_started` rows before translated hook responses.
 - synthesized init/result rows and Shannon metadata row.
@@ -151,8 +153,8 @@ Agent SDK parity still have documented gaps.
   - warm query / prewarmed process behavior
   - custom process spawning
 - full interruption API parity beyond subprocess cancellation
-- Full resume/fork semantics need live testing:
-  - `--resume`
+- Full resume/fork semantics need more live testing:
+  - `--resume <session-id>` is live-tested.
   - `--continue`
   - `--fork-session`
   - `--session-id`
@@ -173,7 +175,7 @@ Agent SDK parity still have documented gaps.
    data; implement if available, otherwise keep the estimator documented as an
    approximation.
 4. Add true live bidi stdin instead of finite stdin sequencing.
-5. Add SDK resume/continue/session live tests.
+5. Add SDK continue/fork/session live tests.
 6. Decide whether unsupported Claude Agent SDK runtime features require a
    separate package/runtime, then document or implement that path.
 7. Expand zod schemas to full Agent SDK parity; add CI, license, release

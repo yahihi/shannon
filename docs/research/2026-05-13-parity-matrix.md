@@ -91,6 +91,9 @@ Session/control flags accepted and forwarded to the underlying interactive
   multi-turn stdin user messages and `--replay-user-messages`.
 - Native `--output-format=json` returns a JSON array of message rows, not only
   the terminal result; Shannon now buffers supported rows and emits one array.
+- Resume by explicit session id appends to an existing transcript, so transcript
+  discovery must scan existing project transcripts for the submitted prompt row
+  with a timestamp after prompt submission.
 
 ## Known Gaps
 
@@ -117,8 +120,8 @@ Session/control flags accepted and forwarded to the underlying interactive
 - Unit-level conformance tests cover argument parsing, SDK option-to-flag
   mapping, transcript row translation, JSONL parsing, and metadata shape.
 - Live smoke tests compare the real `shannon -p ... --output-format=stream-json
-  --verbose` path, finite multi-turn stdin path, and JSON array output against
-  the expected contract and verify tmux cleanup.
+  --verbose` path, finite multi-turn stdin path, JSON array output, and
+  `--resume <session-id>` against the expected contract and verify tmux cleanup.
 - Unit tests cover signal exit-code mapping and pre-start SDK abort behavior.
 - Redacted native `claude -p --model haiku` fixtures cover `text`, `json`, and
   `stream-json --verbose`. The stream fixture captures the current native event
