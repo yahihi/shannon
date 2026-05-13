@@ -69,136 +69,212 @@ how does data get writte to disk when launching interactive (claude w/o -p) sess
 7. support for every claude -p and claude-agent-sdk feature - via an extensive and growing set of conformance tests that can be run (use haiku model to save $$ please)
 
 
-### bidirectional control: canUseTool / hooks proxy
+### bidirectional control: stdio MCP server + injected SDK bridge
 
-Goal: let SDK consumers register a `canUseTool` callback (and arbitrary
-`hooks: { PreToolUse: […] }` entries) the same way the official
-`@anthropic-ai/claude-agent-sdk` does, while Shannon keeps driving an
-interactive `claude` inside tmux.
+Goal: follow the Claude Agent SDK architecture as closely as possible while
+still running a real interactive `claude` session inside tmux.
 
-How the official Agent SDK does `canUseTool` (background, not what we copy):
+The official Agent SDK gets bidirectional control by owning the
+`claude --input-format=stream-json --output-format=stream-json` stdio channel.
+Shannon cannot use `claude -p` internally, so it needs an injected bridge inside
+interactive Claude Code that recreates that control channel.
 
-- It runs `claude --input-format=stream-json --output-format=stream-json` and
-  speaks a bidirectional control plane on top of stdin/stdout.
-- When the CLI needs permission for a tool it emits
-  `{ type: "control_request", request: { subtype: "can_use_tool",
-   tool_name, input, tool_use_id, … } }` on stdout.
-- The host writes a matching `{ type: "control_response", … }` back on stdin
-  with allow / deny / updatedInput.
-- `--permission-prompt-tool` is the MCP-tool variant of the same idea.
+The new design:
 
-Why Shannon can't reuse that: it requires `--input-format=stream-json`, which
-means giving up the real interactive `claude` session inside tmux — the whole
-point of Shannon. So we proxy via the **hook** mechanism instead, since hooks
-fire inside a normal interactive session and already feed Shannon's transcript
-tailer.
+1. Shannon remains the host process. It owns the caller's `query()` invocation,
+   stdout JSONL emission, session bookkeeping, transcript tailing, and SDK
+   callbacks such as `canUseTool`, `hooks`, SDK MCP servers, elicitation, and
+   custom session stores.
+2. Shannon starts an oRPC server on a per-session Unix domain socket such as
+   `/tmp/shannon-<pid>-<session>.sock`.
+3. Shannon launches interactive Claude in tmux and injects a generated
+   `--settings '{...json...}'` object. That settings JSON hard-codes:
+   - a stdio MCP server entry for `shannon-mcp-bridge`;
+   - hook entries that must be present for the requested SDK features;
+   - any bridge-specific environment, socket path, and session id;
+   - merged/overridden MCP and hook configuration derived from SDK options.
+4. Claude still loads normal settings sources (`user`, `project`, `local`, and
+   managed sources) according to Claude Code's regular merge rules. Shannon's
+   generated `--settings` value is an additional injected layer, not a mutation
+   of `~/.claude/settings.json`, `.claude/settings.json`, or
+   `.claude/settings.local.json`.
+5. Claude starts `shannon-mcp-bridge` as the generated stdio MCP server. The
+   bridge connects back to Shannon over the Unix socket and speaks the typed
+   oRPC protocol.
+6. Shannon translates bridge events into Agent-SDK-shaped stdout rows and routes
+   bridge requests to the caller's callbacks. Responses flow back over oRPC to
+   the MCP bridge, then back into interactive Claude.
 
-PreToolUse hook protocol (from
-https://code.claude.com/docs/en/hooks):
+Process topology:
 
-- Loaded from `settings.json` files: user `~/.claude/settings.json`,
-  project `.claude/settings.json`, project-local
-  `.claude/settings.local.json`, managed policy, plugin, or active
-  skill/agent frontmatter.
-- The public docs imply settings files are the only entry point, but the
-  `claude` CLI also accepts `--settings <file-or-json>` (works in
-  interactive mode, not gated to `--print`) which is documented as "Path
-  to a settings JSON file or a JSON string to load additional settings
-  from", plus `--setting-sources <sources>` ("Comma-separated list of
-  setting sources to load (user, project, local)") for scoping which of
-  the on-disk sources also load. **This is the entry point Shannon uses**
-  — no settings-file mutation needed.
-- Hook entry shape (PreToolUse, command type):
-  ```json
-  {
-    "hooks": {
-      "PreToolUse": [
-        {
-          "matcher": "Bash|Edit|Write",
-          "hooks": [
-            {
-              "type": "command",
-              "command": "${CLAUDE_PROJECT_DIR}/.claude/hooks/bridge",
-              "args": ["--session", "<id>"],
-              "timeout": 600
-            }
-          ]
-        }
-      ]
+```text
+SDK caller / shell
+  |
+  | shannon -p ... / query(...)
+  v
+Shannon host process
+  |-- emits Claude Agent SDK compatible JSONL
+  |-- tails ~/.claude/projects/<cwd>/<session>.jsonl
+  |-- owns callbacks: canUseTool, hooks, MCP SDK servers, elicitation, sessionStore
+  |-- owns Unix socket: /tmp/shannon-<pid>-<session>.sock
+  |
+  | tmux new-session ... claude --settings '{...generated bridge settings...}'
+  v
+interactive Claude Code
+  |
+  | starts generated stdio MCP server
+  v
+shannon-mcp-bridge
+  |
+  | oRPC over Unix socket
+  v
+Shannon host process
+```
+
+Generated `--settings` shape:
+
+```json
+{
+  "mcpServers": {
+    "shannon-sdk-bridge": {
+      "type": "stdio",
+      "command": "shannon-mcp-bridge",
+      "args": [
+        "--socket",
+        "/tmp/shannon-<pid>-<session>.sock",
+        "--session",
+        "<shannon-session-id>"
+      ],
+      "env": {
+        "SHANNON_BRIDGE_PROTOCOL": "orpc"
+      }
     }
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "shannon-mcp-bridge",
+            "args": [
+              "hook",
+              "--socket",
+              "/tmp/shannon-<pid>-<session>.sock",
+              "--session",
+              "<shannon-session-id>"
+            ],
+            "timeout": 600
+          }
+        ]
+      }
+    ]
   }
-  ```
-- Command hook gets JSON on stdin (`session_id`, `transcript_path`, `cwd`,
-  `permission_mode`, `hook_event_name`, `tool_name`, `tool_input`, …).
-- Decision channel on stdout / exit code:
-  - exit 0 silent → allow
-  - exit 0 with JSON
-    `{"hookSpecificOutput":{"hookEventName":"PreToolUse",
-    "permissionDecision":"allow|deny|ask|defer",
-    "permissionDecisionReason":"…","updatedInput":{…},
-    "additionalContext":"…"}}`
-  - exit 2 → block, stderr surfaced to user
-- HTTP-type hooks are also supported (POST body = stdin JSON, response JSON
-  body parsed the same way), which is useful when we don't want a separate
-  binary on PATH.
+}
+```
 
-Shannon design — a hook bridge that proxies decisions back to the SDK
-consumer:
+The hook command path is intentionally the same bridge binary. For features
+that Claude Code exposes only through hooks, the short-lived hook invocation
+connects to the same Shannon oRPC socket and forwards the hook input. For
+features Claude exposes through MCP, the long-lived stdio MCP server handles
+the traffic.
 
-1. New bin in `@dexh/shannon`: `shannon-hook-bridge`. Reads hook input JSON
-   on stdin, connects to `/tmp/shannon-<session>.sock` (or a Bun-served
-   localhost HTTP endpoint), forwards the JSON, waits for the parent's
-   response, writes it on stdout, exits 0. Synchronous and tiny.
-2. `query()` gains optional `canUseTool?: CanUseTool` and
-   `hooks?: Partial<Record<HookEvent, HookCallbackMatcher[]>>` (same shape
-   as the official Agent SDK) in `QueryOptions`.
-3. Before launching the tmux session, when either of the above is set,
-   Shannon:
-   a. opens an AF_UNIX socket (or `Bun.serve` localhost HTTP listener)
-      keyed by the Shannon session id;
-   b. builds a settings JSON object containing the PreToolUse (and any
-      other requested event) entry whose `command` is
-      `shannon-hook-bridge --session <id>` (with the matcher derived from
-      registered consumer hooks);
-   c. passes it to `claude` via `--settings '<json-string>'` (or writes a
-      session-scoped temp file under e.g. `~/.shannon/sessions/<id>.json`
-      and passes the path). The existing on-disk settings cascade is
-      untouched — no backup / restore / lockfile needed. Use
-      `--setting-sources` if the consumer wants to scope which on-disk
-      sources also load alongside the injected hooks.
-4. On each bridge connect, Shannon parses the hook input, calls the
-   consumer's `canUseTool(toolName, input, { signal, suggestions, … })`
-   (or fans out to user hooks), translates the return into the
-   `hookSpecificOutput` shape, and sends it back.
-5. On session cleanup: close the socket / listener and remove the temp
-   settings file if one was written. Nothing on the user's
-   `.claude/settings*.json` ever changed.
+oRPC contract:
 
-Observability piggybacks on what already works: `hook_started` /
-`hook_response` rows in the transcript continue to be emitted by Shannon,
-and `--include-hook-events` already routes them out of stream-json.
+```ts
+type ShannonBridgeRpc = {
+  hello(input: {
+    sessionId: string
+    cwd: string
+    bridgeVersion: string
+    claudeVersion?: string
+  }): Promise<{ ok: true; protocolVersion: 1 }>
 
-Open issues to nail down during implementation:
+  emit(input: BridgeEvent): Promise<void>
 
-- `canUseTool` vs explicit `hooks` precedence — the official SDK says
-  PreToolUse hook denies bypass `canUseTool` entirely; Shannon's bridge
-  collapses both into the same code path, so document a deterministic
-  merge rule.
-- Concurrency: no longer a settings-file contention problem since each
-  Shannon session passes its own `--settings` value. Just need
-  per-session unique socket paths and bridge `--session <id>` args.
-- Hook `timeout` (default 60s) caps how long the consumer's `canUseTool`
-  can take. Pass through a Shannon option so consumers can extend it.
-- `permissionDecision: "ask"` requires Shannon to round-trip to the user.
-  Either drop "ask" support initially, or surface it as an
-  `permission_request` event in the Shannon stream that the consumer is
-  expected to answer.
-- HTTP-hook variant might be a better default than a binary on PATH —
-  Shannon already lives in the same process tree as `claude`, so a
-  `localhost` URL it owns is easier to set up and tear down than wiring a
-  bin script.
+  request(input: BridgeRequest): Promise<BridgeResponse>
+}
+```
 
-Conformance test plan: extend the haiku conformance tests with
-`canUseTool` and `hooks` cases that mirror the Agent SDK examples
-(`PreToolUse` matcher patterns, `updatedInput` mutation, `deny` short-
-circuit, `--include-hook-events` round-trip).
+Initial event/request families:
+
+- `tool_call`: MCP tool invocation from Claude to a Shannon-hosted SDK tool or
+  SDK MCP server instance.
+- `can_use_tool`: permission decision request mapped to SDK `canUseTool`.
+- `hook_event`: hook lifecycle event mapped to SDK `hooks`.
+- `elicitation`: user/host elicitation request.
+- `partial_message`: partial assistant text/thinking/tool block event.
+- `status` / `notification`: progress, idle, rate-limit, and background-task
+  notifications.
+- `session_event`: session start/end, title/tag/mirror metadata, subagent
+  events, and transcript location.
+
+Shannon host responsibilities:
+
+- start/stop the Unix socket and oRPC server;
+- build the generated `--settings` JSON, merging SDK-requested hooks/MCP
+  servers with normal Claude settings-source behavior;
+- launch interactive Claude in tmux with that `--settings` value;
+- translate bridge events into Agent-SDK-shaped stdout rows;
+- route bridge requests to user callbacks and SDK MCP server instances;
+- keep transcript-tailing fallback behavior for durable rows;
+- clean up socket and tmux session.
+
+Injected bridge responsibilities:
+
+- run as a stdio MCP server under Claude Code;
+- run as a command hook target when Claude invokes generated hooks;
+- connect to Shannon's Unix socket during initialization or hook execution;
+- expose the bridge tools/resources/prompts needed to route SDK features;
+- forward Claude-originated control events to Shannon;
+- wait for Shannon responses where Claude needs synchronous decisions;
+- degrade with a clear error if the socket is unavailable.
+
+Why this is closer to Claude Agent SDK:
+
+- the host process owns SDK callbacks and emits SDK-compatible JSONL;
+- interactive Claude still runs in tmux;
+- injected MCP/hook settings provide a live bidirectional channel back to the
+  host;
+- transcript tailing remains the durability/compatibility layer rather than the
+  only source of truth.
+
+Implementation steps:
+
+1. Add `shannon-mcp-bridge` binary.
+2. Add `src/bridge/rpc.ts` with the oRPC contract and schemas.
+3. Add a Shannon host-side Unix socket oRPC server tied to `runShannon()`.
+4. Generate a per-session `--settings` JSON object for bridge MCP servers,
+   hooks, env, socket path, and session id.
+5. Merge caller-provided MCP/hook settings into that generated object without
+   mutating user settings files.
+6. Make `query()` pass SDK callbacks/options into the host process instead of
+   trying to serialize functions into CLI flags.
+7. Implement `canUseTool` over the bridge first, then explicit `hooks`, SDK MCP
+   server instances, elicitation, partial messages, and session-store mirroring.
+8. Keep the existing transcript tailer as fallback and for result/init
+   reconstruction until bridge events cover those fields directly.
+
+Conformance test plan:
+
+- Unit-test the generated `--settings` JSON and its merge behavior.
+- Unit-test the oRPC contract with an in-process fake bridge.
+- Add fake-bridge integration tests that simulate:
+  - `canUseTool` allow/deny/updatedInput;
+  - hook events and hook responses;
+  - SDK MCP server tool invocation;
+  - partial message events;
+  - elicitation request/response;
+  - session store transcript mirroring.
+- Add env-gated live Haiku tests that launch interactive Claude with the bridge
+  enabled and assert Agent-SDK-shaped stdout rows match native fixture shape.
+
+Open issues:
+
+- Determine the exact MCP surface the bridge should expose so Claude Code routes
+  SDK tool calls and SDK MCP server instances predictably.
+- Determine which SDK features require generated hooks even with the MCP bridge.
+- Define failure behavior if the bridge disconnects mid-turn.
+- Define ordering between transcript-derived rows and bridge-derived rows so
+  stdout remains stable and deduplicated.

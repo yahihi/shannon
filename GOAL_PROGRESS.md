@@ -18,6 +18,11 @@ Full parity means:
 - Added spec scope is tracked: dependency validation, Commander CLI parsing,
   npm package shape, GitHub/npm release work, SDK/schema support, and growing
   conformance tests.
+- SDK runtime parity follows the new bidirectional bridge design:
+  Shannon injects generated `--settings '{...json...}'` into interactive Claude
+  to hard-code bridge MCP servers/hooks while preserving normal Claude settings
+  source merging; the injected stdio MCP bridge communicates back to the
+  Shannon host over a Unix socket using oRPC.
 - after every meaningful change, ensure the tests pass and then add+commit your changes
 
 ## GUIDANCE - HOW TO BUILD PARITY TESTS
@@ -35,7 +40,11 @@ ALWAYS USE `--model haiku` and `model: haiku` for all test case generation and e
 
 Not full parity yet. The core CLI/SDK prototype is working and live-tested for
 single-turn and finite multi-turn prompts, but exact `claude -p` and full Claude
-Agent SDK parity still have documented gaps.
+Agent SDK parity still have documented gaps. The intended path for the remaining
+SDK runtime features is now the generated `--settings` bridge design in
+`spec-01.md`: inject a Shannon stdio MCP bridge plus required hooks into
+interactive Claude, and use oRPC over a per-session Unix socket back to the
+Shannon host.
 
 ## Evidence Checklist
 
@@ -57,6 +66,7 @@ Agent SDK parity still have documented gaps.
 | Push public GitHub repo | `git push origin main` succeeded on `git@github.com:dexhorthy/shannon.git`. Original spec named `humanlayer/shannon`, so repo namespace parity depends on the chosen target. | Partial |
 | SDK `query()` | `src/sdk.ts` exports async iterable `query()`, JSONL parser, and option mapping for all currently forwarded Shannon CLI flags. | Partial |
 | Full zod schemas | Zod schemas are exported for the current Shannon SDK messages/options/query params; full Claude Agent SDK schema parity is not complete. | Partial |
+| Bidirectional SDK bridge | `spec-01.md` now defines generated `--settings` injection for bridge MCP servers/hooks plus oRPC over a Unix socket; implementation is not started. | Planned |
 | Every `claude -p` / Agent SDK feature | Broad flags are accepted/forwarded and tests exist, but exact stream fields, callbacks, MCP server objects, session stores, warm queries, and full schemas are incomplete. | Partial |
 | Extensive conformance tests | Unit/learning tests, native `claude -p` fixture shape tests, and env-gated live Shannon tests exist. More fixture cases are still needed. | Partial |
 
@@ -187,6 +197,10 @@ Agent SDK parity still have documented gaps.
 - Native `claude -p` text, json, and stream-json fixture shape tests for Haiku.
 - `packages/shannon-agent-sdk` thin package facade for the implemented Shannon
   SDK surface.
+- Architecture spec for the remaining SDK runtime parity path:
+  generated `--settings` injection, stdio `shannon-mcp-bridge`, command-hook
+  fallback through the same bridge binary, and oRPC over a per-session Unix
+  socket back to the Shannon host.
 - `system/init.tools` reconstruction from observed Claude Code built-in tool
   names plus known MCP tools for reconstructed `context7` and `morph-mcp`
   servers.
@@ -247,9 +261,14 @@ Agent SDK parity still have documented gaps.
   - permission callbacks / `canUseTool`
   - SDK MCP server instances
   - hook callback functions
-  - custom session stores
   - warm query / prewarmed process behavior
   - custom process spawning
+- The generated `--settings` bridge is specified but not implemented:
+  - no `shannon-mcp-bridge` binary yet
+  - no oRPC Unix-socket host server yet
+  - no generated settings merge/injection tests yet
+  - no bridge-based `canUseTool`, hooks, SDK MCP servers, elicitation,
+    partial-message, or session-store mirroring yet
 - SDK custom `SessionStore` support is limited to direct helper calls; Shannon
   `query()` does not yet mirror live subprocess transcript writes into a custom
   store.
@@ -279,17 +298,20 @@ Agent SDK parity still have documented gaps.
 
 ## Next Steps
 
-1. Expand native `claude -p` fixture conformance tests for replayed user
+1. Implement generated `--settings` construction and merge tests for bridge MCP
+   servers/hooks while preserving normal Claude settings-source behavior.
+2. Add `shannon-mcp-bridge` and the oRPC Unix-socket contract/server.
+3. Implement bridge-backed `canUseTool` first, then hooks, SDK MCP server
+   instances, elicitation, partial events, and session-store mirroring.
+4. Expand native `claude -p` fixture conformance tests for replayed user
    messages and additional hook/tool cases.
-2. Improve `system/init` reconstruction from transcript/config surfaces and add
+5. Improve `system/init` reconstruction from transcript/config surfaces and add
    field-level tests.
-3. Research whether interactive transcripts expose rate-limit or exact billing
+6. Research whether interactive transcripts expose rate-limit or exact billing
    data; implement if available, otherwise keep the estimator documented as an
    approximation.
-4. Add Agent SDK-style control-channel semantics for interrupting/controlling
+7. Add Agent SDK-style control-channel semantics for interrupting/controlling
    in-flight turns.
-5. Add more resume/fork negative and cross-cwd edge-case live tests.
-6. Decide whether unsupported Claude Agent SDK runtime features require a
-   separate package/runtime, then document or implement that path.
-7. Expand zod schemas to full Agent SDK parity; perform and verify npm publish
+8. Add more resume/fork negative and cross-cwd edge-case live tests.
+9. Expand zod schemas to full Agent SDK parity; perform and verify npm publish
    and GitHub push when credentials/remotes are available.
