@@ -63,7 +63,7 @@ Agent SDK parity still have documented gaps.
 ## Verification Performed
 
 - `bun test`
-  - Passes: 33 tests.
+  - Passes: 34 tests.
   - Skips: 8 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
@@ -136,6 +136,8 @@ Agent SDK parity still have documented gaps.
   durable interactive `skill_listing` attachments.
 - `system/init.mcp_servers` reconstruction from durable interactive
   `mcp_instructions_delta` attachments when present.
+- `system/init.model` uses the transcript assistant model when available, or
+  the requested `--model` value before an assistant row has been observed.
 - synthesized `system/hook_started` rows before translated hook responses.
 - synthesized init/result rows and Shannon metadata row.
 - approximate model/token cost reconstruction for known Claude model families.
@@ -177,8 +179,9 @@ Agent SDK parity still have documented gaps.
   - `mcp_servers` are reconstructed from durable MCP instruction deltas when
     present; exact native status values such as `needs-auth` are not fully
     reconstructed.
-  - `model` uses a transcript assistant model only when one is already
-    available during session discovery; otherwise it is `"unknown"`.
+  - `model` uses a transcript assistant model when available and falls back to
+    the requested `--model` value, but can still be `"unknown"` if neither
+    source is present.
   - `apiKeySource`, `output_style`, `agents`, and `plugins` are emitted with
     native-shaped defaults, but are not fully reconstructed from the running
     session.
@@ -220,6 +223,9 @@ Agent SDK parity still have documented gaps.
   schema set yet.
 - `@dexh/shannon-agent-sdk` exists and is published as a thin facade, but it
   does not implement missing Agent SDK runtime features.
+- Publishing the current source package revisions is blocked on npm 2FA; an
+  attempted publish of `@dexh/shannon@0.0.3` returned `EOTP` and requires an
+  OTP before version bumps can be committed safely.
 - Original spec names `@humanlayer/*` npm packages and `humanlayer/shannon` as
   the public repo. Current committed package metadata and pushed remote use
   `@dexh/*` and `dexhorthy/shannon`; if the original namespace is still required,

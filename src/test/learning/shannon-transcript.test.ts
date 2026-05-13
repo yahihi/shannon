@@ -15,6 +15,7 @@ import {
   claudeProjectFolder,
   estimateCostUSD,
   mcpServersFromRows,
+  modelFromClaudeArgs,
   parseArgs,
   promptFromUserMessage,
   projectKeyForCwd,
@@ -464,6 +465,29 @@ test("synthesizes init from transcript metadata when available", () => {
     slash_commands: ["pair-agent", "design-shotgun"],
     skills: ["pair-agent", "design-shotgun"],
     plugins: [],
+  });
+});
+
+test("uses requested model in init before transcript assistant model is available", () => {
+  expect(modelFromClaudeArgs(["--model", "haiku"])).toBe("haiku");
+  expect(modelFromClaudeArgs(["--model=sonnet"])).toBe("sonnet");
+
+  expect(
+    toSdkInit(
+      {
+        sessionId: "session-1",
+        projectFolder: "/home/test/.claude/projects/-repo",
+        transcriptPath: "/home/test/.claude/projects/-repo/session-1.jsonl",
+        tmuxSession: "shannon-test",
+        cwd: "/repo",
+        requestedModel: "haiku",
+      },
+      [{ type: "user", permissionMode: "auto" }],
+    ),
+  ).toMatchObject({
+    type: "system",
+    subtype: "init",
+    model: "haiku",
   });
 });
 

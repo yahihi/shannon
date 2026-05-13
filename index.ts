@@ -54,6 +54,7 @@ type SessionMetadata = {
   transcriptPath: string;
   tmuxSession: string;
   cwd: string;
+  requestedModel?: string;
 };
 
 type SessionDiscovery = {
@@ -336,6 +337,15 @@ function addRepeatedFlag(args: string[], flag: string, value: unknown) {
   }
 }
 
+export function modelFromClaudeArgs(args: string[]): string | undefined {
+  for (let i = 0; i < args.length; i += 1) {
+    const arg = args[i];
+    if (arg === "--model") return args[i + 1];
+    if (arg?.startsWith("--model=")) return arg.slice("--model=".length);
+  }
+  return undefined;
+}
+
 export function textFromContent(content: unknown): string {
   if (typeof content === "string") return content;
   if (!Array.isArray(content)) return "";
@@ -410,7 +420,7 @@ export function toSdkInit(meta: SessionMetadata, rows: TranscriptRow[]): JsonRec
     session_id: meta.sessionId,
     tools,
     mcp_servers: mcpServers,
-    model: assistantRow?.message?.model ?? "unknown",
+    model: assistantRow?.message?.model ?? meta.requestedModel ?? "unknown",
     permissionMode: typeof userRow?.permissionMode === "string" ? userRow.permissionMode : "unknown",
     apiKeySource: "none",
     claude_code_version: typeof versionedRow?.version === "string" ? versionedRow.version : undefined,
@@ -704,7 +714,10 @@ export async function runShannon(options: CliOptions) {
           prompt,
           promptSentAt,
         );
-        meta = discovery.meta;
+        meta = {
+          ...discovery.meta,
+          requestedModel: modelFromClaudeArgs(options.claudeArgs),
+        };
         transcriptRowCount = 0;
 
         for (const row of discovery.rows) {
