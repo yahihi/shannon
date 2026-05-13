@@ -63,7 +63,7 @@ Agent SDK parity still have documented gaps.
 ## Verification Performed
 
 - `bun test`
-  - Passes: 27 tests.
+  - Passes: 28 tests.
   - Skips: 5 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
@@ -82,8 +82,9 @@ Agent SDK parity still have documented gaps.
   - Passes: 5 live tests.
   - Covers single-turn stream JSON and finite multi-turn stream JSON in one
     session, incremental stdin turns while stdin remains open, JSON array
-    output, nonzero cost fields, reconstructed init tools, resume by session id,
-    session consistency, result turns, metadata, and tmux cleanup.
+    output, nonzero cost fields, reconstructed init tools, text-bearing
+    assistant row selection, resume by session id, session consistency, result
+    turns, metadata, and tmux cleanup.
 - Native fixture:
   - `src/test/fixtures/claude-p-haiku-stream-json.fixture.jsonl`
   - `src/test/fixtures/claude-p-haiku-json.fixture.json`
@@ -115,6 +116,8 @@ Agent SDK parity still have documented gaps.
 - timestamp-aware transcript discovery for resumed sessions that append to an
   existing transcript file.
 - transcript row translation for assistant rows and hook success attachments.
+- assistant reply discovery waits for text-bearing assistant rows so
+  thinking-only transcript chunks do not produce empty synthesized results.
 - `system/init.skills` and `system/init.slash_commands` reconstruction from
   durable interactive `skill_listing` attachments.
 - `system/init.mcp_servers` reconstruction from durable interactive

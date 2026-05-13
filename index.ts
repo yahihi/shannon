@@ -590,6 +590,20 @@ export function promptFromUserMessage(message: JsonRecord): string | undefined {
   return text || undefined;
 }
 
+export function assistantReplyFromRows(prompt: string, rows: TranscriptRow[]): TranscriptRow | undefined {
+  let sawPrompt = false;
+
+  for (const row of rows) {
+    if (row.type === "user" && row.message?.content === prompt) {
+      sawPrompt = true;
+      continue;
+    }
+
+    if (!sawPrompt || row.type !== "assistant" || row.message?.role !== "assistant") continue;
+    if (textFromContent(row.message.content)) return row;
+  }
+}
+
 async function main() {
   const options = parseArgs(Bun.argv.slice(2));
   await runShannon(options);
@@ -910,21 +924,11 @@ async function waitForAssistantReply(
   startedAt: number,
   afterRowCount: number,
 ): Promise<AssistantDiscovery> {
-  let sawPrompt = false;
-
   while (Date.now() - startedAt < TURN_TIMEOUT_MS) {
     const rows = await readTranscript(transcriptPath);
     const newRows = rows.slice(afterRowCount);
-
-    for (const row of newRows) {
-      if (row.type === "user" && row.message?.content === prompt) {
-        sawPrompt = true;
-      }
-
-      if (sawPrompt && row.type === "assistant" && row.message?.role === "assistant") {
-        return { row, rows };
-      }
-    }
+    const row = assistantReplyFromRows(prompt, newRows);
+    if (row) return { row, rows };
 
     await sleep(POLL_MS);
   }

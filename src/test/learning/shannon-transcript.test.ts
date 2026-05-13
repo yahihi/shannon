@@ -11,6 +11,7 @@
 import { expect, test } from "bun:test";
 import {
   DEFAULT_CLAUDE_TOOLS,
+  assistantReplyFromRows,
   claudeProjectFolder,
   estimateCostUSD,
   mcpServersFromRows,
@@ -280,6 +281,33 @@ test("translates an interactive assistant row into SDK-ish assistant and result 
       },
     },
   });
+});
+
+test("selects text-bearing assistant rows after thinking-only transcript chunks", () => {
+  const row = assistantReplyFromRows("hello", [
+    {
+      type: "user",
+      message: { role: "user", content: "hello" },
+    },
+    {
+      type: "assistant",
+      uuid: "thinking-row",
+      message: {
+        role: "assistant",
+        content: [{ type: "thinking", thinking: "", signature: "redacted" }],
+      },
+    },
+    {
+      type: "assistant",
+      uuid: "text-row",
+      message: {
+        role: "assistant",
+        content: [{ type: "text", text: "hello back" }],
+      },
+    },
+  ]);
+
+  expect(row).toMatchObject({ uuid: "text-row" });
 });
 
 test("estimates native-style cost from transcript usage", () => {

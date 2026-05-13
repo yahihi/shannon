@@ -80,6 +80,20 @@ function parseJsonl(stdout: string): JsonRecord[] {
     .map((line) => JSON.parse(line) as JsonRecord);
 }
 
+function textFromMessage(message: JsonRecord | undefined): string {
+  const nested = message?.message;
+  if (!nested || typeof nested !== "object") return "";
+  const content = (nested as JsonRecord).content;
+  if (!Array.isArray(content)) return typeof content === "string" ? content : "";
+  return content
+    .map((block) => {
+      if (!block || typeof block !== "object") return "";
+      const text = (block as JsonRecord).text;
+      return typeof text === "string" ? text : "";
+    })
+    .join("");
+}
+
 async function shannonTmuxSessions() {
   const proc = Bun.spawn(["tmux", "ls"], {
     stdout: "pipe",
@@ -137,7 +151,9 @@ runLive("live Shannon conformance", () => {
     expect(Array.isArray(init!.skills)).toBe(true);
     expect(Array.isArray(init!.slash_commands)).toBe(true);
     expect(assistant!).toMatchObject({ type: "assistant" });
+    expect(textFromMessage(assistant)).toBe("shannon live one");
     expect(result!).toMatchObject({ type: "result", subtype: "success", num_turns: 1 });
+    expect(result!.result).toBe("shannon live one");
     expect(metadata!).toMatchObject({
       type: "shannon_session",
       subtype: "metadata",
@@ -194,7 +210,15 @@ runLive("live Shannon conformance", () => {
     expect(users).toHaveLength(2);
     expect(init).toBeDefined();
     expect(assistants).toHaveLength(2);
+    expect(assistants.map(textFromMessage)).toEqual([
+      "shannon live turn one",
+      "shannon live turn two",
+    ]);
     expect(results).toHaveLength(2);
+    expect(results.map((message) => message.result)).toEqual([
+      "shannon live turn one",
+      "shannon live turn two",
+    ]);
     expect(results.map((message) => message.num_turns)).toEqual([1, 2]);
     expect(new Set(assistants.map((message) => message.session_id)).size).toBe(1);
     const [firstAssistant] = assistants;
@@ -240,7 +264,12 @@ runLive("live Shannon conformance", () => {
     expect(exitCode, stderr).toBe(0);
     expect(messages.at(-1)?.type).toBe("shannon_session");
     expect(messages.filter((message) => message.type === "user")).toHaveLength(2);
-    expect(messages.filter((message) => message.type === "assistant")).toHaveLength(2);
+    const assistants = messages.filter((message) => message.type === "assistant");
+    expect(assistants).toHaveLength(2);
+    expect(assistants.map(textFromMessage)).toEqual([
+      "shannon live bidi one",
+      "shannon live bidi two",
+    ]);
     expect(messages.filter((message) => message.type === "result").map((message) => message.num_turns)).toEqual([1, 2]);
   }, 120_000);
 
@@ -262,6 +291,7 @@ runLive("live Shannon conformance", () => {
       type: "result",
       subtype: "success",
       num_turns: 1,
+      result: "shannon live json",
     });
     const result = messages.at(-1);
     expect(typeof result?.total_cost_usd).toBe("number");
