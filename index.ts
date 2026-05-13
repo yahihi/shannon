@@ -23,6 +23,7 @@ type JsonRecord = Record<string, unknown>;
 type TranscriptRow = JsonRecord & {
   type?: string;
   subtype?: string;
+  durationMs?: number;
   permissionMode?: string;
   sessionId?: string;
   session_id?: string;
@@ -70,6 +71,7 @@ type ShutdownSignal = "SIGINT" | "SIGTERM";
 type AssistantDiscovery = {
   row: TranscriptRow;
   rows: TranscriptRow[];
+  durationMs?: number;
 };
 
 const POLL_MS = 100;
@@ -559,11 +561,11 @@ export function pluginSourcesFromSkillListing(content: string): string[] {
   return [...sources];
 }
 
-export function toSdkResult(row: TranscriptRow, startedAt: number, numTurns = 1): JsonRecord {
+export function toSdkResult(row: TranscriptRow, startedAt: number, numTurns = 1, durationMsOverride?: number): JsonRecord {
   const text = textFromContent(row.message?.content);
   const usage = row.message?.usage ?? {};
   const model = row.message?.model ?? "unknown";
-  const durationMs = Date.now() - startedAt;
+  const durationMs = durationMsOverride ?? Date.now() - startedAt;
   const modelUsage = toModelUsage(model, usage);
   const totalCostUsd = modelUsage.costUSD;
 
@@ -685,6 +687,35 @@ export function assistantReplyFromRows(prompt: string, rows: TranscriptRow[]): T
 
     if (!sawPrompt || row.type !== "assistant" || row.message?.role !== "assistant") continue;
     if (textFromContent(row.message.content)) return row;
+  }
+}
+
+export function turnDurationMsFromRows(prompt: string, rows: TranscriptRow[]): number | undefined {
+  let sawPrompt = false;
+  let sawAssistantReply = false;
+
+  for (const row of rows) {
+    if (row.type === "user" && row.message?.content === prompt) {
+      sawPrompt = true;
+      sawAssistantReply = false;
+      continue;
+    }
+
+    if (!sawPrompt) continue;
+    if (row.type === "assistant" && row.message?.role === "assistant" && textFromContent(row.message.content)) {
+      sawAssistantReply = true;
+      continue;
+    }
+
+    if (
+      sawAssistantReply
+      && row.type === "system"
+      && row.subtype === "turn_duration"
+      && typeof row.durationMs === "number"
+      && Number.isFinite(row.durationMs)
+    ) {
+      return row.durationMs;
+    }
   }
 }
 
@@ -814,7 +845,7 @@ export async function runShannon(options: CliOptions) {
         transcriptRowCount,
       );
       transcriptRowCount = assistant.rows.length;
-      const result = toSdkResult(assistant.row, startedAt, promptCount);
+      const result = toSdkResult(assistant.row, startedAt, promptCount, assistant.durationMs);
       const partial = options.includePartialMessages ? toSdkPartialAssistant(assistant.row) : undefined;
       const turnMessages = [
         ...(partial ? [partial] : []),
@@ -1030,7 +1061,7 @@ async function waitForAssistantReply(
     const rows = await readTranscript(transcriptPath);
     const newRows = rows.slice(afterRowCount);
     const row = assistantReplyFromRows(prompt, newRows);
-    if (row) return { row, rows };
+    if (row) return { row, rows, durationMs: turnDurationMsFromRows(prompt, newRows) };
 
     await sleep(POLL_MS);
   }

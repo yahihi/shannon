@@ -151,6 +151,9 @@ Agent SDK parity still have documented gaps.
   Shannon instead of being forwarded to interactive Claude.
 - synthesized init/result rows and Shannon metadata row.
 - approximate model/token cost reconstruction for known Claude model families.
+- `result.duration_ms` / `duration_api_ms` use durable transcript
+  `system/turn_duration.durationMs` rows when available, with wall-clock
+  fallback.
 - SDK facade with `query()`, async iterable stdout parsing, string prompts,
   async iterable user-message input, and option-to-flag mapping for every
   Shannon CLI flag currently forwarded to Claude.
@@ -207,6 +210,9 @@ Agent SDK parity still have documented gaps.
     token usage for known Claude model families.
   - Pricing is based on the native Haiku fixture and current Anthropic API
     pricing table, not a persisted exact bill row in interactive transcripts.
+  - result durations use durable transcript `turn_duration` rows when present,
+    but may still fall back to wall-clock timing if the row is not observed
+    before emitting.
 - `--include-partial-messages` emits synthesized full-text partial
   `stream_event` rows, but does not provide true token-by-token native deltas
   because interactive transcripts do not persist those chunks.

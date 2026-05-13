@@ -35,6 +35,7 @@ import {
   toShannonMetadata,
   toUserReplay,
   toolsFromMcpServers,
+  turnDurationMsFromRows,
   validateRuntime,
 } from "../../../index";
 
@@ -364,10 +365,16 @@ test("translates an interactive assistant row into SDK-ish assistant and result 
       },
     },
   });
+
+  expect(toSdkResult(row, Date.now(), 1, 1234)).toMatchObject({
+    type: "result",
+    duration_ms: 1234,
+    duration_api_ms: 1234,
+  });
 });
 
 test("selects text-bearing assistant rows after thinking-only transcript chunks", () => {
-  const row = assistantReplyFromRows("hello", [
+  const rows = [
     {
       type: "user",
       message: { role: "user", content: "hello" },
@@ -388,9 +395,16 @@ test("selects text-bearing assistant rows after thinking-only transcript chunks"
         content: [{ type: "text", text: "hello back" }],
       },
     },
-  ]);
+    {
+      type: "system",
+      subtype: "turn_duration",
+      durationMs: 1234,
+    },
+  ];
+  const row = assistantReplyFromRows("hello", rows);
 
   expect(row).toMatchObject({ uuid: "text-row" });
+  expect(turnDurationMsFromRows("hello", rows)).toBe(1234);
 });
 
 test("estimates native-style cost from transcript usage", () => {
