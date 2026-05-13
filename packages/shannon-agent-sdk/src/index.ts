@@ -21,4 +21,4 @@ export {
   type QueryParams,
   type ShannonMessage,
   type ShannonUserMessage,
-} from "@humanlayer/shannon";
+} from "@dexh/shannon";

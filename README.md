@@ -1,72 +1,70 @@
 # Shannon
 
-Shannon is a CLI and SDK wrapper around the interactive Claude Code CLI. It starts a real `claude` session inside tmux, sends a prompt, tails Claude's on-disk transcript, emits stream JSON, and cleans up the tmux session on exit.
+Shannon is a CLI and SDK wrapper around the interactive Claude Code CLI. It runs a real `claude` session inside tmux, sends a prompt, and emits stream JSON.
 
-The first supported path is:
+```mermaid
+flowchart LR
+    User([Your code / shell])
+    subgraph Shannon["@dexh/shannon"]
+      SDK["SDK<br/>query()"]
+      CLI["CLI<br/>shannon"]
+    end
+    subgraph Host["Local host"]
+      Tmux["tmux session"]
+      Claude["claude (interactive)"]
+      Transcript[("~/.claude/projects<br/>transcript JSONL")]
+    end
+    Anthropic[["Anthropic API"]]
 
-```sh
-shannon -p "hi i'm tom" --output-format=stream-json --verbose
+    User -->|"prompt"| SDK
+    User -->|"prompt"| CLI
+    SDK -->|"spawns"| CLI
+    CLI -->|"sends keys"| Tmux
+    Tmux --> Claude
+    Claude <-->|"HTTPS"| Anthropic
+    Claude -->|"appends"| Transcript
+    CLI -->|"tails"| Transcript
+    CLI -->|"stream-json / json / text"| User
 ```
 
-Shannon does not use `claude -p` internally.
+The dashed-style boundary: Shannon never calls the Anthropic API directly — it drives a real `claude` session and reads its on-disk transcript. `claude -p` is not used internally.
 
 ## Requirements
 
-- Bun
+- [Bun](https://bun.sh)
 - `claude` on `PATH`
 - `tmux` on `PATH`
-- A working Claude Code login/configuration
-
-## Install
-
-```sh
-bun install
-bun link
-```
-
-After linking, `shannon` should resolve from your Bun bin directory:
-
-```sh
-which shannon
-```
+- A working Claude Code login
 
 ## CLI
 
+Run without installing:
+
 ```sh
+npx @dexh/shannon -p "Reply with exactly: hello" --output-format=stream-json --verbose
+```
+
+Or install globally:
+
+```sh
+npm install -g @dexh/shannon
 shannon -p "Reply with exactly: hello" --output-format=stream-json --verbose
 ```
 
-Incremental stdin JSONL input is supported for one or more user messages:
-
-```sh
-printf '%s\n' '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"Reply with exactly: hello"}]},"parent_tool_use_id":null,"session_id":""}' \
-  | shannon --input-format=stream-json --output-format=stream-json --verbose --replay-user-messages
-```
-
-Current stream shape:
-
-- `system` / `hook_response` when interactive transcript hook attachments are present
-- `system` / `init`
-- `assistant`
-- synthesized `result` / `success`
-- final `shannon_session` / `metadata`
-
-The final metadata row includes the Claude session id, transcript path, project session folder, tmux session name, cwd, and cleanup status.
-
-`--output-format=json` emits one JSON array containing Shannon's supported
-message rows. `--output-format=text` emits the final result text.
+Output formats: `stream-json` (JSONL), `json` (single array), `text` (final result text).
 
 ## SDK
 
+```sh
+npm install @dexh/shannon
+```
+
 ```ts
-import { query } from "@humanlayer/shannon";
+import { query } from "@dexh/shannon";
 
 for await (const message of query({
   prompt: "Reply with exactly: hello",
-  options: {
-    outputFormat: "stream-json",
-    verbose: true,
-  },
+  options: { outputFormat: "stream-json", verbose: true },
 })) {
   console.log(JSON.stringify(message));
 }
@@ -75,7 +73,7 @@ for await (const message of query({
 Async input is also accepted for finite user-message streams:
 
 ```ts
-import { query, type ShannonUserMessage } from "@humanlayer/shannon";
+import { query, type ShannonUserMessage } from "@dexh/shannon";
 
 async function* messages(): AsyncIterable<ShannonUserMessage> {
   yield {
@@ -94,36 +92,32 @@ for await (const message of query({ prompt: messages() })) {
 }
 ```
 
-Queries accept an `AbortController` in options; aborting it terminates the
-underlying Shannon subprocess.
+Pass an `AbortController` in options to terminate the underlying Shannon subprocess.
 
-The SDK also exports zod schemas for the current Shannon message, options, and
-query parameter surface:
+## Agent SDK facade
 
-```ts
-import { shannonMessageSchema, shannonQueryOptionsSchema } from "@humanlayer/shannon";
+`@dexh/shannon-agent-sdk` is a Claude Agent SDK-compatible facade that re-exports Shannon's SDK surface. Full parity is a work in progress (see `GOAL_PROGRESS.md`).
+
+```sh
+npm install @dexh/shannon-agent-sdk
 ```
 
-The SDK facade shells out to the `shannon` executable and parses JSONL stdout into an async iterable.
+```ts
+import { query } from "@dexh/shannon-agent-sdk";
 
-The repo also includes `packages/shannon-agent-sdk`, a thin
-`@humanlayer/shannon-agent-sdk` facade over the implemented Shannon SDK surface.
-It is not full Claude Agent SDK parity yet.
+for await (const message of query({
+  prompt: "Reply with exactly: hello",
+  options: { outputFormat: "stream-json", verbose: true },
+})) {
+  console.log(JSON.stringify(message));
+}
+```
 
 ## Development
 
 ```sh
+bun install
 bun test
 bun run typecheck
-```
-
-CI runs the same non-live checks plus package dry-runs for both packages.
-The publish workflow publishes `@humanlayer/shannon` and
-`@humanlayer/shannon-agent-sdk` from a GitHub release or manual dispatch when
-`NPM_TOKEN` is configured.
-
-Run the CLI directly:
-
-```sh
 bun ./index.ts -p "hello" --output-format=stream-json --verbose
 ```

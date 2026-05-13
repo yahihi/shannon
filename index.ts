@@ -13,6 +13,7 @@ type CliOptions = {
   verbose: boolean;
   replayUserMessages: boolean;
   cwd: string;
+  pathToClaudeCodeExecutable?: string;
   claudeArgs: string[];
 };
 
@@ -172,6 +173,7 @@ export function parseArgs(argv: string[], cwd = process.cwd()): CliOptions {
     .option("--no-chrome", "disable Claude in Chrome integration")
     .option("--no-session-persistence", "disable session persistence")
     .option("--permission-mode <mode>", "permission mode")
+    .option("--path-to-claude-code-executable <path>", "path to the Claude Code executable")
     .option("--plugin-dir <path>", "plugin directory", collect, [])
     .option("--plugin-url <url>", "plugin URL", collect, [])
     .option("--remote-control [name]", "start an interactive session with Remote Control enabled")
@@ -228,6 +230,9 @@ export function parseArgs(argv: string[], cwd = process.cwd()): CliOptions {
     verbose: parsed.verbose,
     replayUserMessages: parsed.replayUserMessages === true,
     cwd: resolve(cwd),
+    pathToClaudeCodeExecutable: typeof parsed.pathToClaudeCodeExecutable === "string"
+      ? parsed.pathToClaudeCodeExecutable
+      : undefined,
     claudeArgs: buildClaudeArgs(parsed),
   };
 }
@@ -620,7 +625,7 @@ async function main() {
 }
 
 export async function runShannon(options: CliOptions) {
-  await validateRuntime();
+  const runtime = await validateRuntime(options.pathToClaudeCodeExecutable);
 
   const tmuxSession = `shannon-${randomUUID()}`;
   const projectFolder = claudeProjectFolder(options.cwd);
@@ -671,7 +676,7 @@ export async function runShannon(options: CliOptions) {
       tmuxSession,
       "-c",
       options.cwd,
-      "claude",
+      runtime.claude,
       ...options.claudeArgs,
       prompt,
     ]);
@@ -800,14 +805,14 @@ function installSignalHandlers({
   };
 }
 
-export async function validateRuntime() {
+export async function validateRuntime(claudeExecutable = "claude") {
   const [claude, tmux] = await Promise.all([
-    findExecutable("claude"),
+    findExecutable(claudeExecutable),
     findExecutable("tmux"),
   ]);
 
   if (!claude) {
-    throw new Error("Missing required executable: claude. Install Claude Code and make sure `claude` is on PATH.");
+    throw new Error(`Missing required executable: ${claudeExecutable}. Install Claude Code and make sure it is on PATH.`);
   }
 
   if (!tmux) {

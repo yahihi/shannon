@@ -1,6 +1,6 @@
 {
-  "name": "@humanlayer/shannon-agent-sdk",
-  "version": "0.0.0",
+  "name": "@dexh/shannon-agent-sdk",
+  "version": "0.0.1",
   "description": "Claude Agent SDK-compatible facade for Shannon.",
   "license": "MIT",
   "homepage": "https://github.com/humanlayer/shannon/tree/main/packages/shannon-agent-sdk#readme",
@@ -26,6 +26,12 @@
     "type": "git",
     "url": "git+https://github.com/humanlayer/shannon.git",
     "directory": "packages/shannon-agent-sdk"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@dexh/shannon": "^0.0.1"
   },
   "private": false
 }

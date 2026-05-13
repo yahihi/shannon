@@ -1,6 +1,6 @@
 {
-  "name": "@humanlayer/shannon",
-  "version": "0.0.0",
+  "name": "@dexh/shannon",
+  "version": "0.0.2",
   "description": "CLI and SDK wrapper that drives interactive Claude Code through tmux and emits stream-json.",
   "license": "MIT",
   "homepage": "https://github.com/humanlayer/shannon#readme",
@@ -17,7 +17,7 @@
   "module": "index.ts",
   "type": "module",
   "bin": {
-    "shannon": "./index.ts"
+    "shannon": "bin/shannon.mjs"
   },
   "exports": {
     ".": "./src/sdk.ts",
@@ -34,12 +34,16 @@
   "files": [
     "index.ts",
     "src/sdk.ts",
+    "bin/shannon.mjs",
     "README.md",
     "LICENSE"
   ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/humanlayer/shannon.git"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "private": false,
   "devDependencies": {
