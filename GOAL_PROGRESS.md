@@ -64,7 +64,7 @@ Agent SDK parity still have documented gaps.
 
 - `bun test`
   - Passes: 34 tests.
-  - Skips: 8 live tests unless `SHANNON_LIVE=1`.
+  - Skips: 9 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
 - `bun pm pack --dry-run`
@@ -89,13 +89,14 @@ Agent SDK parity still have documented gaps.
   - `.github/workflows/publish.yml` publishes both packages on GitHub release
     or manual dispatch when `NPM_TOKEN` is configured.
 - `SHANNON_LIVE=1 bun test src/test/learning/shannon-live.test.ts`
-  - Passes: 8 live tests.
+  - Passes: 9 live tests.
   - Covers single-turn stream JSON and finite multi-turn stream JSON in one
     session, incremental stdin turns while stdin remains open, JSON array
     output, nonzero cost fields, reconstructed init tools, text-bearing
     assistant row selection, resume by session id, custom `--session-id`,
     `--continue`, `--fork-session` with a caller-provided fork session id,
-    session consistency, result turns, metadata, and tmux cleanup.
+    SDK `query()` custom session id plus resume, session consistency, result
+    turns, metadata, and tmux cleanup.
 - Native fixture:
   - `src/test/fixtures/claude-p-haiku-stream-json.fixture.jsonl`
   - `src/test/fixtures/claude-p-haiku-json.fixture.json`
@@ -218,12 +219,13 @@ Agent SDK parity still have documented gaps.
   - custom process spawning
 - full interruption API parity beyond SDK `interrupt()`/`close()` subprocess
   cancellation
-- Full resume/fork semantics need more live testing:
+- Full resume/fork semantics still need broader edge-case testing:
   - `--resume <session-id>` is live-tested.
   - `--continue` is live-tested.
   - `--session-id` is live-tested for a new caller-provided session id.
   - `--fork-session` is live-tested when resuming into a caller-provided fork
     session id.
+  - SDK `query()` custom session id and resume are live-tested.
 - Zod schemas cover Shannon's current emitted message rows, selected additional
   Agent SDK stream/control variants, and SDK surface, but not the full Claude
   Agent SDK schema set yet.
@@ -248,7 +250,7 @@ Agent SDK parity still have documented gaps.
    approximation.
 4. Add Agent SDK-style control-channel semantics for interrupting/controlling
    in-flight turns.
-5. Add SDK continue/fork/session live tests.
+5. Add SDK continue/fork edge-case live tests.
 6. Decide whether unsupported Claude Agent SDK runtime features require a
    separate package/runtime, then document or implement that path.
 7. Expand zod schemas to full Agent SDK parity; perform and verify npm publish

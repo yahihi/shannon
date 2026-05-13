@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { randomUUID } from "node:crypto";
+import { query } from "../../sdk";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -93,6 +94,22 @@ function textFromMessage(message: JsonRecord | undefined): string {
       return typeof text === "string" ? text : "";
     })
     .join("");
+}
+
+async function collectSdkLiveMessages(prompt: string, options: Record<string, unknown>) {
+  const messages: JsonRecord[] = [];
+  for await (const message of query({
+    prompt,
+    options: {
+      command: "./bin/shannon.mjs",
+      model: "haiku",
+      outputFormat: "stream-json",
+      ...options,
+    },
+  })) {
+    messages.push(message);
+  }
+  return messages;
 }
 
 async function shannonTmuxSessions() {
@@ -465,5 +482,36 @@ runLive("live Shannon conformance", () => {
       session_id: forkSessionId,
       result: "shannon live fork child",
     });
+  }, 120_000);
+
+  test("SDK query supports caller-provided session id and resume", async () => {
+    const sessionId = randomUUID();
+    const firstMessages = await collectSdkLiveMessages(
+      "Reply with exactly: shannon live sdk session one",
+      { sessionId },
+    );
+
+    expect(firstMessages.at(-1)).toMatchObject({
+      type: "shannon_session",
+      subtype: "metadata",
+      session_id: sessionId,
+    });
+    expect(textFromMessage(firstMessages.find((message) => message.type === "assistant"))).toBe(
+      "shannon live sdk session one",
+    );
+
+    const secondMessages = await collectSdkLiveMessages(
+      "Reply with exactly: shannon live sdk session two",
+      { resume: sessionId },
+    );
+
+    expect(secondMessages.at(-1)).toMatchObject({
+      type: "shannon_session",
+      subtype: "metadata",
+      session_id: sessionId,
+    });
+    expect(textFromMessage(secondMessages.find((message) => message.type === "assistant"))).toBe(
+      "shannon live sdk session two",
+    );
   }, 120_000);
 });
