@@ -13,7 +13,7 @@ Full parity means:
   `claude -p` internally.
 - Shannon launches interactive `claude` in tmux, sends prompts, discovers the
   Claude session id/transcript, emits Claude-like JSONL, and cleans up.
-- The SDK exposes `query()` from `@humanlayer/shannon` with async iterable
+- The SDK exposes `query()` from the Shannon package with async iterable
   behavior similar to Claude Agent SDK.
 - Added spec scope is tracked: dependency validation, Commander CLI parsing,
   npm package shape, GitHub/npm release work, SDK/schema support, and growing
@@ -52,9 +52,9 @@ Agent SDK parity still have documented gaps.
 | Surface login/setup errors | prompt/transcript timeouts include `tmux capture-pane` output. | Partial |
 | Cleanup on interruption | SIGINT/SIGTERM handlers share the tmux cleanup path and use conventional exit codes. | Implemented |
 | Use Commander | `parseArgs()` uses `commander`. | Implemented |
-| Publish package as `@humanlayer/shannon` | `package.json` name is `@humanlayer/shannon`, bin/export metadata exists. Not published. | Partial |
-| Publish `@humanlayer/shannon-agent-sdk` | `packages/shannon-agent-sdk` exists and packs as a thin facade. Not published and not full Agent SDK parity. | Partial |
-| Push public GitHub repo | repository metadata points at `humanlayer/shannon`; no release/push evidence in this checkout. | Missing |
+| Publish package | Current package metadata is `@dexh/shannon`; npm reports `@dexh/shannon@0.0.2`. Original spec named `@humanlayer/shannon`, so namespace parity depends on the chosen package target. | Partial |
+| Publish agent SDK facade | Current package metadata is `@dexh/shannon-agent-sdk`; npm reports `@dexh/shannon-agent-sdk@0.0.1`. Full Agent SDK parity is still incomplete. | Partial |
+| Push public GitHub repo | `git push origin main` succeeded; `origin/main` resolves to `c2593eb508b38341bf9232d3d19170681527a1a8` on `git@github.com:dexhorthy/shannon.git`. Original spec named `humanlayer/shannon`, so repo namespace parity depends on the chosen target. | Partial |
 | SDK `query()` | `src/sdk.ts` exports async iterable `query()`, JSONL parser, and option mapping. | Partial |
 | Full zod schemas | Zod schemas are exported for the current Shannon SDK messages/options/query params; full Claude Agent SDK schema parity is not complete. | Partial |
 | Every `claude -p` / Agent SDK feature | Broad flags are accepted/forwarded and tests exist, but exact stream fields, callbacks, MCP server objects, session stores, warm queries, and full schemas are incomplete. | Partial |
@@ -68,15 +68,21 @@ Agent SDK parity still have documented gaps.
 - `bun run typecheck`
   - Passes.
 - `bun pm pack --dry-run`
-  - Passes for `@humanlayer/shannon`.
+  - Passes for `@dexh/shannon`.
 - `cd packages/shannon-agent-sdk && bun pm pack --dry-run`
-  - Passes for `@humanlayer/shannon-agent-sdk`.
+  - Passes for `@dexh/shannon-agent-sdk`.
 - `bun run pack:check`
   - Passes package dry-runs for both packages.
 - `./bin/shannon.mjs -p "Reply with exactly: shannon bin wrapper" --model haiku --output-format=text`
   - Passes and prints `shannon bin wrapper`.
 - `cd examples/hello-world && bun run start`
   - Passes and prints `hello`.
+- `bun pm view @dexh/shannon version`
+  - Reports `0.0.2`.
+- `bun pm view @dexh/shannon-agent-sdk version`
+  - Reports `0.0.1`.
+- `git ls-remote --heads origin main`
+  - Reports `c2593eb508b38341bf9232d3d19170681527a1a8`.
 - CI:
   - `.github/workflows/ci.yml` runs install, tests, typecheck, and package
     dry-runs for both packages.
@@ -204,9 +210,12 @@ Agent SDK parity still have documented gaps.
     session id.
 - Zod schemas cover Shannon's current emitted message rows and SDK surface, but
   not the full Claude Agent SDK schema set yet.
-- `@humanlayer/shannon-agent-sdk` exists as a thin facade, but it is not
-  published and does not implement missing Agent SDK runtime features.
-- No actual npm publish evidence or confirmed GitHub push from this checkout.
+- `@dexh/shannon-agent-sdk` exists and is published as a thin facade, but it
+  does not implement missing Agent SDK runtime features.
+- Original spec names `@humanlayer/*` npm packages and `humanlayer/shannon` as
+  the public repo. Current committed package metadata and pushed remote use
+  `@dexh/*` and `dexhorthy/shannon`; if the original namespace is still required,
+  those publish/push targets remain incomplete.
 
 ## Next Steps
 
