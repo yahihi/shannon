@@ -18,10 +18,13 @@ import {
   shannonHookResponseSchema,
   shannonHookStartedSchema,
   shannonMessageSchema,
+  shannonNotificationMessageSchema,
+  shannonPartialAssistantMessageSchema,
   shannonQueryOptionsSchema,
   shannonQueryParamsSchema,
   shannonRateLimitEventSchema,
   shannonResultMessageSchema,
+  shannonStatusMessageSchema,
   shannonStreamMessageSchema,
   shannonSystemInitSchema,
   shannonUserMessageSchema,
@@ -335,4 +338,49 @@ test("exports structured schemas for emitted stream rows", async () => {
   for (const row of fixtureRows) {
     expect(shannonStreamMessageSchema.parse(row)).toMatchObject({ type: row.type });
   }
+});
+
+test("exports schemas for additional Agent SDK stream message variants", () => {
+  expect(
+    shannonPartialAssistantMessageSchema.parse({
+      type: "stream_event",
+      event: { type: "content_block_delta", delta: { type: "text_delta", text: "hi" } },
+      parent_tool_use_id: null,
+      session_id: "session-1",
+      uuid: "uuid-partial",
+      ttft_ms: 42,
+    }),
+  ).toMatchObject({
+    type: "stream_event",
+    session_id: "session-1",
+  });
+
+  expect(
+    shannonStatusMessageSchema.parse({
+      type: "system",
+      subtype: "status",
+      status: "ready",
+      permissionMode: "default",
+      session_id: "session-1",
+      uuid: "uuid-status",
+    }),
+  ).toMatchObject({
+    type: "system",
+    subtype: "status",
+  });
+
+  expect(
+    shannonNotificationMessageSchema.parse({
+      type: "system",
+      subtype: "notification",
+      key: "notice",
+      text: "Ready",
+      priority: "low",
+      session_id: "session-1",
+      uuid: "uuid-notification",
+    }),
+  ).toMatchObject({
+    type: "system",
+    subtype: "notification",
+  });
 });

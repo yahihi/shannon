@@ -157,6 +157,15 @@ export const shannonHookResponseSchema = z.object({
   uuid: z.string(),
 }).catchall(z.unknown());
 
+export const shannonPartialAssistantMessageSchema = z.object({
+  type: z.literal("stream_event"),
+  event: z.object({ type: z.string() }).catchall(z.unknown()),
+  parent_tool_use_id: z.string().nullable(),
+  session_id: z.string(),
+  uuid: z.string(),
+  ttft_ms: z.number().optional(),
+}).catchall(z.unknown());
+
 export const shannonAssistantMessageSchema = z.object({
   type: z.literal("assistant"),
   message: z.object({
@@ -185,6 +194,29 @@ export const shannonResultMessageSchema = z.object({
   modelUsage: z.record(z.string(), z.unknown()),
   permission_denials: z.array(z.unknown()),
   terminal_reason: z.string(),
+  uuid: z.string(),
+}).catchall(z.unknown());
+
+export const shannonStatusMessageSchema = z.object({
+  type: z.literal("system"),
+  subtype: z.literal("status"),
+  status: z.string(),
+  permissionMode: z.string().optional(),
+  compact_result: z.enum(["success", "failed"]).optional(),
+  compact_error: z.string().optional(),
+  session_id: z.string(),
+  uuid: z.string(),
+}).catchall(z.unknown());
+
+export const shannonNotificationMessageSchema = z.object({
+  type: z.literal("system"),
+  subtype: z.literal("notification"),
+  key: z.string(),
+  text: z.string(),
+  priority: z.enum(["low", "medium", "high", "immediate"]),
+  color: z.string().optional(),
+  timeout_ms: z.number().optional(),
+  session_id: z.string(),
   uuid: z.string(),
 }).catchall(z.unknown());
 
@@ -238,8 +270,11 @@ export const shannonStreamMessageSchema = z.union([
   shannonSystemInitSchema,
   shannonHookStartedSchema,
   shannonHookResponseSchema,
+  shannonPartialAssistantMessageSchema,
   shannonAssistantMessageSchema,
   shannonResultMessageSchema,
+  shannonStatusMessageSchema,
+  shannonNotificationMessageSchema,
   shannonSessionMetadataSchema,
   shannonRateLimitEventSchema,
 ]);
