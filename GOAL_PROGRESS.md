@@ -75,6 +75,8 @@ Agent SDK parity still have documented gaps.
   - Passes package dry-runs for both packages.
 - `./bin/shannon.mjs -p "Reply with exactly: shannon bin wrapper" --model haiku --output-format=text`
   - Passes and prints `shannon bin wrapper`.
+- `cd examples/hello-world && bun run start`
+  - Passes and prints `hello`.
 - CI:
   - `.github/workflows/ci.yml` runs install, tests, typecheck, and package
     dry-runs for both packages.
@@ -149,6 +151,8 @@ Agent SDK parity still have documented gaps.
 - Release metadata and npm publish workflow for both package manifests.
 - Published package bin wrapper at `bin/shannon.mjs`, verified against the local
   CLI path.
+- `examples/hello-world` SDK example that exercises `query()` through the
+  published package entrypoint.
 - Live conformance tests for single-turn and finite multi-turn execution.
 - README usage for CLI and SDK.
 

@@ -1,0 +1,11 @@
+{
+  "name": "shannon-hello-world",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "bun run hello.ts"
+  },
+  "dependencies": {
+    "@dexh/shannon": "^0.0.2"
+  }
+}
