@@ -69,7 +69,7 @@ still has known gaps.
   - Maps common SDK-like options to Shannon CLI flags.
 
 - Packaging:
-  - Package renamed to `@humanlayer/shannon`.
+  - Package renamed to `@dexhorthy/shannon`.
   - Exports:
     - `.` -> `src/sdk.ts`
     - `./cli` -> `index.ts`
@@ -85,7 +85,7 @@ still has known gaps.
 
 - `spec-01.md`
   - Main product/spec document.
-  - Updated SDK snippet to use `@humanlayer/shannon`.
+  - Updated SDK snippet to use `@dexhorthy/shannon`.
 
 - `docs/research/2026-05-13-claude-cli-learning.md`
   - Captures black-box observations from `claude -p`.
@@ -351,7 +351,7 @@ still has known gaps.
     - Decide initial semver version.
     - Add license.
     - Add CI.
-    - Publish to npm as `@humanlayer/shannon`.
+    - Publish to npm as `@dexhorthy/shannon`.
 
 ## Current Good Stopping Point
 
@@ -362,4 +362,3 @@ This checkpoint is good because:
 - No Shannon tmux session is left running.
 - The latest implementation includes the cursor fix needed before rerunning
   multi-turn finite stdin live smoke.
-
