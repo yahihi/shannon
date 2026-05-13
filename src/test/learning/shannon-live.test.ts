@@ -418,4 +418,52 @@ runLive("live Shannon conformance", () => {
       result: "shannon live continue two",
     });
   }, 120_000);
+
+  test("forks a resumed session into a caller-provided session id", async () => {
+    const first = await runShannonLive([
+      "-p",
+      "Reply with exactly: shannon live fork base",
+      "--model",
+      "haiku",
+      "--output-format=stream-json",
+      "--verbose",
+    ]);
+
+    expect(first.exitCode, first.stderr).toBe(0);
+    const baseSessionId = parseJsonl(first.stdout).at(-1)?.session_id;
+    expect(typeof baseSessionId).toBe("string");
+
+    const forkSessionId = randomUUID();
+    const second = await runShannonLive([
+      "--resume",
+      baseSessionId as string,
+      "--fork-session",
+      "--session-id",
+      forkSessionId,
+      "-p",
+      "Reply with exactly: shannon live fork child",
+      "--model",
+      "haiku",
+      "--output-format=stream-json",
+      "--verbose",
+    ]);
+
+    expect(second.exitCode, second.stderr).toBe(0);
+    const messages = parseJsonl(second.stdout);
+    expect(messages.at(-1)).toMatchObject({
+      type: "shannon_session",
+      subtype: "metadata",
+      session_id: forkSessionId,
+    });
+    expect(forkSessionId).not.toBe(baseSessionId);
+    expect(messages.find((message) => message.type === "assistant")).toMatchObject({
+      type: "assistant",
+      session_id: forkSessionId,
+    });
+    expect(messages.find((message) => message.type === "result")).toMatchObject({
+      type: "result",
+      session_id: forkSessionId,
+      result: "shannon live fork child",
+    });
+  }, 120_000);
 });

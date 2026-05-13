@@ -101,6 +101,8 @@ Session/control flags accepted and forwarded to the underlying interactive
 - `--continue` also appends to the most recent cwd transcript and uses the same
   timestamp-bound discovery path. A caller-provided `--session-id` creates a
   transcript with that id.
+- `--fork-session` with `--resume` and a caller-provided `--session-id` creates
+  a new fork transcript with the requested child id.
 - Interactive transcripts can persist thinking-only assistant rows immediately
   before text rows for the same model response. Shannon waits for a text-bearing
   assistant row before synthesizing `result` to avoid empty results.
