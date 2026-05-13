@@ -104,8 +104,10 @@ Session/control flags accepted and forwarded to the underlying interactive
 - Native `claude -p` emits exact `system/init` tools, MCP server, model, agents,
   skills, slash commands, plugins, memory paths, and API key source.
   Interactive transcripts provide skill listings, MCP instruction deltas, and
-  later assistant model data, but do not currently provide all fields in one
-  durable row, so Shannon still emits placeholders for some fields.
+  later assistant model data. Shannon reconstructs observed built-in tool names
+  and known MCP tool names for `context7` and `morph-mcp`, but interactive
+  transcripts do not currently provide all fields in one durable row, so some
+  init fields remain approximate.
 - Native `claude -p` emits `rate_limit_event`; Shannon does not yet reconstruct
   this from transcript data.
 - Native exact billed costs are not persisted in a directly equivalent

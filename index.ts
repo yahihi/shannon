@@ -98,6 +98,35 @@ const MODEL_PRICING: Array<{ pattern: RegExp; pricing: ModelPricing }> = [
   },
 ];
 
+export const DEFAULT_CLAUDE_TOOLS = [
+  "Task",
+  "AskUserQuestion",
+  "Bash",
+  "CronCreate",
+  "CronDelete",
+  "CronList",
+  "Edit",
+  "EnterPlanMode",
+  "EnterWorktree",
+  "ExitPlanMode",
+  "ExitWorktree",
+  "Glob",
+  "Grep",
+  "Monitor",
+  "NotebookEdit",
+  "PushNotification",
+  "Read",
+  "RemoteTrigger",
+  "ScheduleWakeup",
+  "Skill",
+  "TaskOutput",
+  "TaskStop",
+  "TodoWrite",
+  "WebFetch",
+  "WebSearch",
+  "Write",
+];
+
 export function parseArgs(argv: string[], cwd = process.cwd()): CliOptions {
   const program = new Command()
     .name("shannon")
@@ -357,13 +386,14 @@ export function toSdkInit(meta: SessionMetadata, rows: TranscriptRow[]): JsonRec
   const assistantRow = rows.find((row) => typeof row.message?.model === "string");
   const skillNames = skillNamesFromRows(rows);
   const mcpServers = mcpServersFromRows(rows);
+  const tools = toolsFromMcpServers(mcpServers);
 
   return {
     type: "system",
     subtype: "init",
     cwd: meta.cwd,
     session_id: meta.sessionId,
-    tools: [],
+    tools,
     mcp_servers: mcpServers,
     model: assistantRow?.message?.model ?? "unknown",
     permissionMode: typeof userRow?.permissionMode === "string" ? userRow.permissionMode : "unknown",
@@ -372,6 +402,24 @@ export function toSdkInit(meta: SessionMetadata, rows: TranscriptRow[]): JsonRec
     skills: skillNames,
     uuid: randomUUID(),
   };
+}
+
+export function toolsFromMcpServers(mcpServers: Array<{ name: string }>): string[] {
+  return [
+    ...DEFAULT_CLAUDE_TOOLS,
+    ...mcpServers.flatMap((server) => mcpToolNames(server.name)),
+  ];
+}
+
+function mcpToolNames(serverName: string) {
+  switch (serverName) {
+    case "context7":
+      return ["mcp__context7__query-docs", "mcp__context7__resolve-library-id"];
+    case "morph-mcp":
+      return ["mcp__morph-mcp__codebase_search"];
+    default:
+      return [];
+  }
 }
 
 export function mcpServersFromRows(rows: TranscriptRow[]): Array<{ name: string; status: string }> {

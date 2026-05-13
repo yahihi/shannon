@@ -82,8 +82,8 @@ Agent SDK parity still have documented gaps.
   - Passes: 5 live tests.
   - Covers single-turn stream JSON and finite multi-turn stream JSON in one
     session, incremental stdin turns while stdin remains open, JSON array
-    output, nonzero cost fields, resume by session id, session consistency,
-    result turns, metadata, and tmux cleanup.
+    output, nonzero cost fields, reconstructed init tools, resume by session id,
+    session consistency, result turns, metadata, and tmux cleanup.
 - Native fixture:
   - `src/test/fixtures/claude-p-haiku-stream-json.fixture.jsonl`
   - `src/test/fixtures/claude-p-haiku-json.fixture.json`
@@ -130,6 +130,9 @@ Agent SDK parity still have documented gaps.
 - Native `claude -p` text, json, and stream-json fixture shape tests for Haiku.
 - `packages/shannon-agent-sdk` thin package facade for the implemented Shannon
   SDK surface.
+- `system/init.tools` reconstruction from observed Claude Code built-in tool
+  names plus known MCP tools for reconstructed `context7` and `morph-mcp`
+  servers.
 - MIT license file and package license metadata.
 - GitHub Actions CI workflow for non-live verification.
 - Release metadata and npm publish workflow for both package manifests.
@@ -139,7 +142,9 @@ Agent SDK parity still have documented gaps.
 ## Known Gaps
 
 - `system/init` is approximate:
-  - `tools` is `[]`.
+  - `tools` includes observed built-in Claude Code tool names and known MCP
+    tools for reconstructed `context7` and `morph-mcp` servers, but is not yet
+    dynamically recovered from an exact native init row.
   - `mcp_servers` are reconstructed from durable MCP instruction deltas when
     present; exact native status values such as `needs-auth` are not fully
     reconstructed.

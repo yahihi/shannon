@@ -10,6 +10,7 @@
  */
 import { expect, test } from "bun:test";
 import {
+  DEFAULT_CLAUDE_TOOLS,
   claudeProjectFolder,
   estimateCostUSD,
   mcpServersFromRows,
@@ -27,6 +28,7 @@ import {
   toSdkResult,
   toShannonMetadata,
   toUserReplay,
+  toolsFromMcpServers,
   validateRuntime,
 } from "../../../index";
 
@@ -210,6 +212,27 @@ test("extracts MCP server names from interactive MCP instruction deltas", () => 
   ]);
 });
 
+test("reconstructs init tools from observed Claude defaults and known MCP servers", () => {
+  expect(DEFAULT_CLAUDE_TOOLS).toEqual(
+    expect.arrayContaining(["Task", "AskUserQuestion", "Bash", "Read", "Write"]),
+  );
+  expect(
+    toolsFromMcpServers([
+      { name: "context7" },
+      { name: "morph-mcp" },
+      { name: "unknown-server" },
+    ]),
+  ).toEqual(
+    expect.arrayContaining([
+      "Task",
+      "Read",
+      "mcp__context7__query-docs",
+      "mcp__context7__resolve-library-id",
+      "mcp__morph-mcp__codebase_search",
+    ]),
+  );
+});
+
 test("translates an interactive assistant row into SDK-ish assistant and result rows", () => {
   const row = {
     type: "assistant",
@@ -360,6 +383,12 @@ test("synthesizes init from transcript metadata when available", () => {
     model: "claude-test",
     permissionMode: "auto",
     claude_code_version: "2.1.140",
+    tools: expect.arrayContaining([
+      "Task",
+      "Read",
+      "mcp__context7__query-docs",
+      "mcp__context7__resolve-library-id",
+    ]),
     mcp_servers: [{ name: "context7", status: "connected" }],
     slash_commands: ["pair-agent", "design-shotgun"],
     skills: ["pair-agent", "design-shotgun"],

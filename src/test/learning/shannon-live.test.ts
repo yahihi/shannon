@@ -128,6 +128,7 @@ runLive("live Shannon conformance", () => {
     expect(metadata).toBeDefined();
 
     expect(init!).toMatchObject({ type: "system", subtype: "init" });
+    expect(init!.tools).toEqual(expect.arrayContaining(["Task", "Read", "Write"]));
     expect(Array.isArray(init!.mcp_servers)).toBe(true);
     expect(Array.isArray(init!.skills)).toBe(true);
     expect(Array.isArray(init!.slash_commands)).toBe(true);
