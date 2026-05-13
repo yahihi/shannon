@@ -36,7 +36,7 @@ which shannon
 shannon -p "Reply with exactly: hello" --output-format=stream-json --verbose
 ```
 
-Finite stdin JSONL input is supported for one or more user messages:
+Incremental stdin JSONL input is supported for one or more user messages:
 
 ```sh
 printf '%s\n' '{"type":"user","message":{"role":"user","content":[{"type":"text","text":"Reply with exactly: hello"}]},"parent_tool_use_id":null,"session_id":""}' \

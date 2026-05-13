@@ -47,7 +47,7 @@ Agent SDK parity still have documented gaps.
 | Discover session id | `waitForSessionWithPrompt()` finds the new transcript under `~/.claude/projects/<cwd-key>/<session>.jsonl` and derives the id from the filename. | Implemented |
 | Stream JSONL events | `stream-json` emits optional hook lifecycle rows, `system/init`, `assistant`, `result`, and final Shannon metadata. | Partial parity |
 | Kill tmux / print session info | `finally` kills tmux; `shannon_session/metadata` includes session id, transcript path, tmux session, cwd, and cleanup status. | Implemented |
-| Conversation continuation | Finite multi-turn stdin is live-tested in one session; true live bidi and full resume semantics remain. | Partial |
+| Conversation continuation | Incremental multi-turn stdin and resume by session id are live-tested; full Agent SDK control semantics remain partial. | Partial |
 | Validate `claude` and `tmux` | `validateRuntime()` and tests. Local versions: Claude Code `2.1.140`, tmux `3.6a`. | Implemented |
 | Surface login/setup errors | prompt/transcript timeouts include `tmux capture-pane` output. | Partial |
 | Cleanup on interruption | SIGINT/SIGTERM handlers share the tmux cleanup path and use conventional exit codes. | Implemented |
@@ -64,7 +64,7 @@ Agent SDK parity still have documented gaps.
 
 - `bun test`
   - Passes: 24 tests.
-  - Skips: 4 live tests unless `SHANNON_LIVE=1`.
+  - Skips: 5 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
 - `bun pm pack --dry-run`
@@ -75,10 +75,11 @@ Agent SDK parity still have documented gaps.
   - `.github/workflows/ci.yml` runs install, tests, typecheck, and package
     dry-runs for both packages.
 - `SHANNON_LIVE=1 bun test src/test/learning/shannon-live.test.ts`
-  - Passes: 4 live tests.
+  - Passes: 5 live tests.
   - Covers single-turn stream JSON and finite multi-turn stream JSON in one
-    session, JSON array output, nonzero cost fields, resume by session id,
-    session consistency, result turns, metadata, and tmux cleanup.
+    session, incremental stdin turns while stdin remains open, JSON array
+    output, nonzero cost fields, resume by session id, session consistency,
+    result turns, metadata, and tmux cleanup.
 - Native fixture:
   - `src/test/fixtures/claude-p-haiku-stream-json.fixture.jsonl`
   - `src/test/fixtures/claude-p-haiku-json.fixture.json`
@@ -96,7 +97,7 @@ Agent SDK parity still have documented gaps.
 ## Implemented
 
 - CLI entrypoint with `#!/usr/bin/env bun`.
-- `shannon -p`, positional prompt, text stdin, and finite
+- `shannon -p`, positional prompt, text stdin, and incremental
   `--input-format=stream-json`.
 - `--output-format=stream-json`, `json`, and `text`.
 - `--output-format=json` now emits one JSON array of supported message rows,
@@ -150,8 +151,9 @@ Agent SDK parity still have documented gaps.
   - `hook_response` is translated from durable `hook_success` attachments.
   - Other hook lifecycle variants have not been observed as durable interactive
     transcript rows.
-- `--input-format=stream-json` supports finite multi-turn input, not open-ended
-  live bidirectional stdin.
+- `--input-format=stream-json` supports incremental sequential stdin turns.
+  It does not yet expose full Agent SDK control-channel semantics such as
+  interrupting an in-flight turn.
 - SDK callback/runtime features are missing:
   - permission callbacks / `canUseTool`
   - SDK MCP server instances
@@ -180,7 +182,8 @@ Agent SDK parity still have documented gaps.
 3. Research whether interactive transcripts expose rate-limit or exact billing
    data; implement if available, otherwise keep the estimator documented as an
    approximation.
-4. Add true live bidi stdin instead of finite stdin sequencing.
+4. Add Agent SDK-style control-channel semantics for interrupting/controlling
+   in-flight turns.
 5. Add SDK continue/fork/session live tests.
 6. Decide whether unsupported Claude Agent SDK runtime features require a
    separate package/runtime, then document or implement that path.

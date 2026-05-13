@@ -18,7 +18,7 @@ Core:
 - `--output-format=stream-json`
 - `--output-format=json` as one JSON message array
 - `--output-format=text`
-- `--input-format=stream-json` for finite user messages from stdin
+- `--input-format=stream-json` for incremental user messages from stdin
 - `--verbose`
 - `--replay-user-messages`
 
@@ -89,8 +89,8 @@ Session/control flags accepted and forwarded to the underlying interactive
   submitting the prompt in Claude's input box.
 - `--output-format=json` and `--output-format=text` should not emit the extra
   stream rows or final Shannon metadata row; those are stream-json-only.
-- The current `--input-format=stream-json` implementation supports finite
-  multi-turn stdin user messages and `--replay-user-messages`.
+- The current `--input-format=stream-json` implementation supports incremental
+  sequential stdin user messages and `--replay-user-messages`.
 - Native `--output-format=json` returns a JSON array of message rows, not only
   the terminal result; Shannon now buffers supported rows and emits one array.
 - Resume by explicit session id appends to an existing transcript, so transcript
@@ -111,9 +111,9 @@ Session/control flags accepted and forwarded to the underlying interactive
   `modelUsage.*.costUSD` from transcript token usage for known Claude model
   families using Anthropic API pricing. This is closer to native output but is
   still documented as an estimate.
-- Full bidi `--input-format=stream-json` is not implemented yet. Shannon's
-  current CLI and SDK support finite stdin/async user messages, sent
-  sequentially through one interactive session.
+- Full Agent SDK control-channel bidi is not implemented yet. Shannon's current
+  CLI and SDK support incremental stdin/async user messages, sent sequentially
+  through one interactive session.
 - Programmatic permission callbacks, MCP SDK server instances, hook callback
   functions, custom process spawning, warm query sessions, and session stores
   require an in-process SDK runtime, not just CLI flag forwarding.
@@ -123,7 +123,7 @@ Session/control flags accepted and forwarded to the underlying interactive
 - Unit-level conformance tests cover argument parsing, SDK option-to-flag
   mapping, transcript row translation, JSONL parsing, and metadata shape.
 - Live smoke tests compare the real `shannon -p ... --output-format=stream-json
-  --verbose` path, finite multi-turn stdin path, JSON array output, and
+  --verbose` path, incremental multi-turn stdin path, JSON array output, and
   `--resume <session-id>` against the expected contract and verify tmux cleanup.
 - Unit tests cover signal exit-code mapping and pre-start SDK abort behavior.
 - Redacted native `claude -p --model haiku` fixtures cover `text`, `json`, and

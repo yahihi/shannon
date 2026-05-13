@@ -26,6 +26,53 @@ async function runShannonLive(args: string[], stdin?: string) {
   return { stdout, stderr, exitCode };
 }
 
+async function runShannonLiveInteractiveInput(args: string[], messages: JsonRecord[]) {
+  const proc = Bun.spawn(["bun", "./index.ts", ...args], {
+    cwd: process.cwd(),
+    stdin: "pipe",
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const reader = proc.stdout.getReader();
+  const decoder = new TextDecoder();
+  const seen: JsonRecord[] = [];
+  let buffer = "";
+  let wroteSecond = false;
+
+  proc.stdin?.write(`${JSON.stringify(messages[0])}\n`);
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+    const lines = buffer.split("\n");
+    buffer = lines.pop() ?? "";
+
+    for (const line of lines) {
+      if (!line.trim()) continue;
+      const message = JSON.parse(line) as JsonRecord;
+      seen.push(message);
+
+      if (!wroteSecond && message.type === "result") {
+        wroteSecond = true;
+        proc.stdin?.write(`${JSON.stringify(messages[1])}\n`);
+        proc.stdin?.end();
+      }
+    }
+  }
+
+  buffer += decoder.decode();
+  if (buffer.trim()) seen.push(JSON.parse(buffer) as JsonRecord);
+
+  const [stderr, exitCode] = await Promise.all([
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+
+  return { messages: seen, stderr, exitCode };
+}
+
 function parseJsonl(stdout: string): JsonRecord[] {
   return stdout
     .split("\n")
@@ -152,6 +199,43 @@ runLive("live Shannon conformance", () => {
       subtype: "metadata",
       cleanup: { tmux_killed: true },
     });
+  }, 120_000);
+
+  test("streams stdin turns while stdin remains open", async () => {
+    const stdinMessages = [
+      {
+        type: "user",
+        message: {
+          role: "user",
+          content: "Reply with exactly: shannon live bidi one",
+        },
+      },
+      {
+        type: "user",
+        message: {
+          role: "user",
+          content: "Reply with exactly: shannon live bidi two",
+        },
+      },
+    ];
+
+    const { messages, stderr, exitCode } = await runShannonLiveInteractiveInput(
+      [
+        "--input-format=stream-json",
+        "--model",
+        "haiku",
+        "--output-format=stream-json",
+        "--verbose",
+        "--replay-user-messages",
+      ],
+      stdinMessages,
+    );
+
+    expect(exitCode, stderr).toBe(0);
+    expect(messages.at(-1)?.type).toBe("shannon_session");
+    expect(messages.filter((message) => message.type === "user")).toHaveLength(2);
+    expect(messages.filter((message) => message.type === "assistant")).toHaveLength(2);
+    expect(messages.filter((message) => message.type === "result").map((message) => message.num_turns)).toEqual([1, 2]);
   }, 120_000);
 
   test("emits json output as one message array", async () => {
