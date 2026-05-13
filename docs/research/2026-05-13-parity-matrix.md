@@ -100,8 +100,11 @@ Session/control flags accepted and forwarded to the underlying interactive
   placeholders for some fields.
 - Native `claude -p` emits `rate_limit_event`; Shannon does not yet reconstruct
   this from transcript data.
-- Native costs are not persisted in a directly equivalent transcript row, so
-  synthesized `result.total_cost_usd` and `modelUsage.*.costUSD` remain `0`.
+- Native exact billed costs are not persisted in a directly equivalent
+  interactive transcript row. Shannon estimates `result.total_cost_usd` and
+  `modelUsage.*.costUSD` from transcript token usage for known Claude model
+  families using Anthropic API pricing. This is closer to native output but is
+  still documented as an estimate.
 - Full bidi `--input-format=stream-json` is not implemented yet. Shannon's
   current CLI and SDK support finite stdin/async user messages, sent
   sequentially through one interactive session.

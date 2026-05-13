@@ -63,7 +63,7 @@ Agent SDK parity still have documented gaps.
 ## Verification Performed
 
 - `bun test`
-  - Passes: 21 tests.
+  - Passes: 22 tests.
   - Skips: 3 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
@@ -74,8 +74,8 @@ Agent SDK parity still have documented gaps.
 - `SHANNON_LIVE=1 bun test src/test/learning/shannon-live.test.ts`
   - Passes: 3 live tests.
   - Covers single-turn stream JSON and finite multi-turn stream JSON in one
-    session, JSON array output, session consistency, result turns, metadata,
-    and tmux cleanup.
+    session, JSON array output, nonzero cost fields, session consistency,
+    result turns, metadata, and tmux cleanup.
 - Native fixture:
   - `src/test/fixtures/claude-p-haiku-stream-json.fixture.jsonl`
   - `src/test/fixtures/claude-p-haiku-json.fixture.json`
@@ -107,6 +107,7 @@ Agent SDK parity still have documented gaps.
 - transcript row translation for assistant rows and hook success attachments.
 - synthesized `system/hook_started` rows before translated hook responses.
 - synthesized init/result rows and Shannon metadata row.
+- approximate model/token cost reconstruction for known Claude model families.
 - SDK facade with `query()`, async iterable stdout parsing, string prompts,
   async iterable user-message input, and option-to-flag mapping.
 - SDK `AbortController` support for cancelling the Shannon subprocess.
@@ -128,9 +129,11 @@ Agent SDK parity still have documented gaps.
   - native fields such as slash commands, agents, skills, plugins,
     `apiKeySource`, memory paths, and output style are not fully reconstructed.
 - `rate_limit_event` is not reconstructed.
-- Exact cost parity is missing:
-  - `total_cost_usd` is `0`.
-  - `modelUsage.*.costUSD` is `0`.
+- Exact billing parity is not guaranteed:
+  - `total_cost_usd` and `modelUsage.*.costUSD` are estimated from transcript
+    token usage for known Claude model families.
+  - Pricing is based on the native Haiku fixture and current Anthropic API
+    pricing table, not a persisted exact bill row in interactive transcripts.
 - `--include-partial-messages` is accepted/forwarded but partial message stream
   rows are not synthesized from interactive transcripts.
 - Hook lifecycle parity is partial:
@@ -166,8 +169,9 @@ Agent SDK parity still have documented gaps.
    messages and additional hook/tool cases.
 2. Improve `system/init` reconstruction from transcript/config surfaces and add
    field-level tests.
-3. Research whether interactive transcripts expose rate-limit or exact cost
-   data; implement if available, otherwise document the hard limitation.
+3. Research whether interactive transcripts expose rate-limit or exact billing
+   data; implement if available, otherwise keep the estimator documented as an
+   approximation.
 4. Add true live bidi stdin instead of finite stdin sequencing.
 5. Add SDK resume/continue/session live tests.
 6. Decide whether unsupported Claude Agent SDK runtime features require a

@@ -42,6 +42,12 @@ The final native `result` row contains:
 - `terminal_reason`
 - `uuid`
 
+Shannon now estimates `total_cost_usd` and `modelUsage.*.costUSD` from
+transcript token usage for known Claude model families. The estimate uses the
+same 5-minute cache write convention observed in the native Haiku fixture and
+the current Anthropic API pricing table:
+https://platform.claude.com/docs/en/about-claude/pricing
+
 ## Transcript Location
 
 For cwd `/Users/dex/repos/dexhorthy/shannon`, Claude writes transcripts under:

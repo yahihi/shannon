@@ -11,6 +11,7 @@
 import { expect, test } from "bun:test";
 import {
   claudeProjectFolder,
+  estimateCostUSD,
   parseArgs,
   promptFromUserMessage,
   projectKeyForCwd,
@@ -131,7 +132,7 @@ test("translates an interactive assistant row into SDK-ish assistant and result 
     sessionId: "session-1",
     message: {
       role: "assistant",
-      model: "claude-test",
+      model: "claude-haiku-4-5-20251001",
       content: [{ type: "text", text: "hello from transcript" }],
       stop_reason: "end_turn",
       usage: {
@@ -158,8 +159,38 @@ test("translates an interactive assistant row into SDK-ish assistant and result 
     num_turns: 1,
     result: "hello from transcript",
     session_id: "session-1",
+    total_cost_usd: 0.000031,
     terminal_reason: "completed",
+    modelUsage: {
+      "claude-haiku-4-5-20251001": {
+        inputTokens: 3,
+        outputTokens: 4,
+        cacheReadInputTokens: 5,
+        cacheCreationInputTokens: 6,
+        costUSD: 0.000031,
+      },
+    },
   });
+});
+
+test("estimates native-style cost from transcript usage", () => {
+  expect(
+    estimateCostUSD("claude-haiku-4-5-20251001", {
+      input_tokens: 10,
+      cache_creation_input_tokens: 35735,
+      cache_read_input_tokens: 0,
+      output_tokens: 48,
+      server_tool_use: { web_search_requests: 0 },
+    }),
+  ).toBe(0.04491875);
+
+  expect(
+    estimateCostUSD("claude-sonnet-4-5", {
+      input_tokens: 1000,
+      output_tokens: 100,
+      server_tool_use: { web_search_requests: 1 },
+    }),
+  ).toBeCloseTo(0.0145);
 });
 
 test("translates interactive hook success attachments into hook response stream rows", () => {

@@ -68,6 +68,33 @@ type AssistantDiscovery = {
 const POLL_MS = 100;
 const START_TIMEOUT_MS = 20_000;
 const TURN_TIMEOUT_MS = 180_000;
+const WEB_SEARCH_COST_USD = 0.01;
+
+type ModelPricing = {
+  inputPerMTok: number;
+  outputPerMTok: number;
+  contextWindow?: number;
+  maxOutputTokens?: number;
+};
+
+const MODEL_PRICING: Array<{ pattern: RegExp; pricing: ModelPricing }> = [
+  {
+    pattern: /claude-haiku-4-5|haiku/i,
+    pricing: { inputPerMTok: 1, outputPerMTok: 5, contextWindow: 200_000, maxOutputTokens: 32_000 },
+  },
+  {
+    pattern: /claude-sonnet-(4|3-7)|sonnet/i,
+    pricing: { inputPerMTok: 3, outputPerMTok: 15, contextWindow: 200_000, maxOutputTokens: 64_000 },
+  },
+  {
+    pattern: /claude-opus-4-(5|6|7)|opus-(4-5|4-6|4-7)/i,
+    pricing: { inputPerMTok: 5, outputPerMTok: 25, contextWindow: 200_000, maxOutputTokens: 32_000 },
+  },
+  {
+    pattern: /claude-opus|opus/i,
+    pricing: { inputPerMTok: 15, outputPerMTok: 75, contextWindow: 200_000, maxOutputTokens: 32_000 },
+  },
+];
 
 export function parseArgs(argv: string[], cwd = process.cwd()): CliOptions {
   const program = new Command()
@@ -346,6 +373,8 @@ export function toSdkResult(row: TranscriptRow, startedAt: number, numTurns = 1)
   const usage = row.message?.usage ?? {};
   const model = row.message?.model ?? "unknown";
   const durationMs = Date.now() - startedAt;
+  const modelUsage = toModelUsage(model, usage);
+  const totalCostUsd = modelUsage.costUSD;
 
   return {
     type: "result",
@@ -357,24 +386,65 @@ export function toSdkResult(row: TranscriptRow, startedAt: number, numTurns = 1)
     result: text,
     stop_reason: row.message?.stop_reason ?? "end_turn",
     session_id: row.sessionId ?? row.session_id,
-    total_cost_usd: 0,
+    total_cost_usd: totalCostUsd,
     usage,
     modelUsage: {
-      [model]: {
-        inputTokens: usage.input_tokens ?? 0,
-        outputTokens: usage.output_tokens ?? 0,
-        cacheReadInputTokens: usage.cache_read_input_tokens ?? 0,
-        cacheCreationInputTokens: usage.cache_creation_input_tokens ?? 0,
-        webSearchRequests: usage.server_tool_use && typeof usage.server_tool_use === "object"
-          ? (usage.server_tool_use as JsonRecord).web_search_requests ?? 0
-          : 0,
-        costUSD: 0,
-      },
+      [model]: modelUsage,
     },
     permission_denials: [],
     terminal_reason: "completed",
     uuid: randomUUID(),
   };
+}
+
+export function estimateCostUSD(model: string, usage: JsonRecord): number {
+  const pricing = pricingForModel(model);
+  if (!pricing) return 0;
+
+  const inputTokens = numberFromUsage(usage.input_tokens);
+  const outputTokens = numberFromUsage(usage.output_tokens);
+  const cacheReadInputTokens = numberFromUsage(usage.cache_read_input_tokens);
+  const cacheCreationInputTokens = numberFromUsage(usage.cache_creation_input_tokens);
+  const webSearchRequests = webSearchRequestsFromUsage(usage);
+
+  const tokenCost = (
+    inputTokens * pricing.inputPerMTok
+    + cacheCreationInputTokens * pricing.inputPerMTok * 1.25
+    + cacheReadInputTokens * pricing.inputPerMTok * 0.1
+    + outputTokens * pricing.outputPerMTok
+  ) / 1_000_000;
+
+  return tokenCost + webSearchRequests * WEB_SEARCH_COST_USD;
+}
+
+function toModelUsage(model: string, usage: JsonRecord): JsonRecord {
+  const pricing = pricingForModel(model);
+  const costUSD = estimateCostUSD(model, usage);
+
+  return {
+    inputTokens: numberFromUsage(usage.input_tokens),
+    outputTokens: numberFromUsage(usage.output_tokens),
+    cacheReadInputTokens: numberFromUsage(usage.cache_read_input_tokens),
+    cacheCreationInputTokens: numberFromUsage(usage.cache_creation_input_tokens),
+    webSearchRequests: webSearchRequestsFromUsage(usage),
+    costUSD,
+    ...(pricing?.contextWindow !== undefined ? { contextWindow: pricing.contextWindow } : {}),
+    ...(pricing?.maxOutputTokens !== undefined ? { maxOutputTokens: pricing.maxOutputTokens } : {}),
+  };
+}
+
+function pricingForModel(model: string): ModelPricing | undefined {
+  return MODEL_PRICING.find(({ pattern }) => pattern.test(model))?.pricing;
+}
+
+function numberFromUsage(value: unknown): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function webSearchRequestsFromUsage(usage: JsonRecord): number {
+  const serverToolUse = usage.server_tool_use;
+  if (!serverToolUse || typeof serverToolUse !== "object") return 0;
+  return numberFromUsage((serverToolUse as JsonRecord).web_search_requests);
 }
 
 export function toShannonMetadata(meta: SessionMetadata, cleanup: JsonRecord): JsonRecord {

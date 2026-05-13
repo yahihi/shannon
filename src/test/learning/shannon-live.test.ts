@@ -171,5 +171,11 @@ runLive("live Shannon conformance", () => {
       subtype: "success",
       num_turns: 1,
     });
+    const result = messages.at(-1);
+    expect(typeof result?.total_cost_usd).toBe("number");
+    expect(result!.total_cost_usd as number).toBeGreaterThan(0);
+    expect(Object.values(result!.modelUsage as JsonRecord)[0]).toMatchObject({
+      costUSD: expect.any(Number),
+    });
   }, 60_000);
 });
