@@ -117,6 +117,8 @@ bun test
 bun run typecheck
 ```
 
+CI runs the same non-live checks plus package dry-runs for both packages.
+
 Run the CLI directly:
 
 ```sh

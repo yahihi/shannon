@@ -2,6 +2,7 @@
   "name": "@humanlayer/shannon",
   "version": "0.0.0",
   "description": "CLI and SDK wrapper that drives interactive Claude Code through tmux and emits stream-json.",
+  "license": "MIT",
   "module": "index.ts",
   "type": "module",
   "bin": {
@@ -21,7 +22,8 @@
   "files": [
     "index.ts",
     "src/sdk.ts",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "repository": {
     "type": "git",

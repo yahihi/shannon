@@ -71,6 +71,9 @@ Agent SDK parity still have documented gaps.
   - Passes for `@humanlayer/shannon`.
 - `cd packages/shannon-agent-sdk && bun pm pack --dry-run`
   - Passes for `@humanlayer/shannon-agent-sdk`.
+- CI:
+  - `.github/workflows/ci.yml` runs install, tests, typecheck, and package
+    dry-runs for both packages.
 - `SHANNON_LIVE=1 bun test src/test/learning/shannon-live.test.ts`
   - Passes: 4 live tests.
   - Covers single-turn stream JSON and finite multi-turn stream JSON in one
@@ -120,6 +123,8 @@ Agent SDK parity still have documented gaps.
 - Native `claude -p` text, json, and stream-json fixture shape tests for Haiku.
 - `packages/shannon-agent-sdk` thin package facade for the implemented Shannon
   SDK surface.
+- MIT license file and package license metadata.
+- GitHub Actions CI workflow for non-live verification.
 - Live conformance tests for single-turn and finite multi-turn execution.
 - README usage for CLI and SDK.
 
@@ -164,8 +169,7 @@ Agent SDK parity still have documented gaps.
   Agent SDK schema set yet.
 - `@humanlayer/shannon-agent-sdk` exists as a thin facade, but it is not
   published and does not implement missing Agent SDK runtime features.
-- No CI, license, npm publish evidence, or confirmed GitHub push from this
-  checkout.
+- No npm publish evidence or confirmed GitHub push from this checkout.
 
 ## Next Steps
 
@@ -180,5 +184,5 @@ Agent SDK parity still have documented gaps.
 5. Add SDK continue/fork/session live tests.
 6. Decide whether unsupported Claude Agent SDK runtime features require a
    separate package/runtime, then document or implement that path.
-7. Expand zod schemas to full Agent SDK parity; add CI, license, release
-   metadata, and npm publishing workflow.
+7. Expand zod schemas to full Agent SDK parity; add release metadata and npm
+   publishing workflow.

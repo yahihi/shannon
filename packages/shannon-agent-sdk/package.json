@@ -2,6 +2,7 @@
   "name": "@humanlayer/shannon-agent-sdk",
   "version": "0.0.0",
   "description": "Claude Agent SDK-compatible facade for Shannon.",
+  "license": "MIT",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
