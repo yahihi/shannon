@@ -77,6 +77,7 @@ type AssistantDiscovery = {
 const POLL_MS = 100;
 const START_TIMEOUT_MS = 20_000;
 const TURN_TIMEOUT_MS = 180_000;
+const TURN_DURATION_GRACE_MS = 1_000;
 const WEB_SEARCH_COST_USD = 0.01;
 
 type ModelPricing = {
@@ -1057,11 +1058,24 @@ async function waitForAssistantReply(
   startedAt: number,
   afterRowCount: number,
 ): Promise<AssistantDiscovery> {
+  let pendingRow: TranscriptRow | undefined;
+  let pendingRows: TranscriptRow[] | undefined;
+  let pendingStartedAt = 0;
+
   while (Date.now() - startedAt < TURN_TIMEOUT_MS) {
     const rows = await readTranscript(transcriptPath);
     const newRows = rows.slice(afterRowCount);
     const row = assistantReplyFromRows(prompt, newRows);
-    if (row) return { row, rows, durationMs: turnDurationMsFromRows(prompt, newRows) };
+    const durationMs = turnDurationMsFromRows(prompt, newRows);
+    if (row && durationMs !== undefined) return { row, rows, durationMs };
+    if (row && !pendingRow) {
+      pendingRow = row;
+      pendingRows = rows;
+      pendingStartedAt = Date.now();
+    }
+    if (pendingRow && Date.now() - pendingStartedAt >= TURN_DURATION_GRACE_MS) {
+      return { row: pendingRow, rows: pendingRows ?? rows };
+    }
 
     await sleep(POLL_MS);
   }
