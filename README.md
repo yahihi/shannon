@@ -53,6 +53,9 @@ Current stream shape:
 
 The final metadata row includes the Claude session id, transcript path, project session folder, tmux session name, cwd, and cleanup status.
 
+`--output-format=json` emits one JSON array containing Shannon's supported
+message rows. `--output-format=text` emits the final result text.
+
 ## SDK
 
 ```ts
@@ -102,6 +105,10 @@ import { shannonMessageSchema, shannonQueryOptionsSchema } from "@humanlayer/sha
 ```
 
 The SDK facade shells out to the `shannon` executable and parses JSONL stdout into an async iterable.
+
+The repo also includes `packages/shannon-agent-sdk`, a thin
+`@humanlayer/shannon-agent-sdk` facade over the implemented Shannon SDK surface.
+It is not full Claude Agent SDK parity yet.
 
 ## Development
 

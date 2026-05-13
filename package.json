@@ -11,6 +11,9 @@
     ".": "./src/sdk.ts",
     "./cli": "./index.ts"
   },
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "test": "bun test",
     "typecheck": "bunx tsc --noEmit"

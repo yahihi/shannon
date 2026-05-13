@@ -95,6 +95,7 @@ test("documents native claude -p stream-json verbose event shape", async () => {
 test("tracks current Shannon gaps against the native fixture", async () => {
   const nativeKeys = new Set((await readFixture()).map(keyFor));
   const currentShannonKeys = new Set([
+    "system/hook_started",
     "system/hook_response",
     "system/init",
     "assistant",
@@ -103,7 +104,6 @@ test("tracks current Shannon gaps against the native fixture", async () => {
   ]);
 
   expect([...nativeKeys].filter((key) => !currentShannonKeys.has(key))).toEqual([
-    "system/hook_started",
     "rate_limit_event",
   ]);
 });

@@ -16,7 +16,7 @@ Core:
 - `-p, --print <prompt>`
 - positional prompt
 - `--output-format=stream-json`
-- `--output-format=json`
+- `--output-format=json` as one JSON message array
 - `--output-format=text`
 - `--input-format=stream-json` for finite user messages from stdin
 - `--verbose`
@@ -71,6 +71,8 @@ Session/control flags accepted and forwarded to the underlying interactive
 ## Implemented Stream Rows
 
 - `system/hook_response` from interactive `hook_success` attachments.
+- `system/hook_started` synthesized from interactive `hook_success`
+  attachments.
 - `system/init`, synthesized from transcript metadata.
 - `assistant`, translated from transcript assistant rows.
 - `result/success`, synthesized from the assistant row.
@@ -87,6 +89,8 @@ Session/control flags accepted and forwarded to the underlying interactive
   stream rows or final Shannon metadata row; those are stream-json-only.
 - The current `--input-format=stream-json` implementation supports finite
   multi-turn stdin user messages and `--replay-user-messages`.
+- Native `--output-format=json` returns a JSON array of message rows, not only
+  the terminal result; Shannon now buffers supported rows and emits one array.
 
 ## Known Gaps
 
@@ -110,8 +114,8 @@ Session/control flags accepted and forwarded to the underlying interactive
 - Unit-level conformance tests cover argument parsing, SDK option-to-flag
   mapping, transcript row translation, JSONL parsing, and metadata shape.
 - Live smoke tests compare the real `shannon -p ... --output-format=stream-json
-  --verbose` path and finite multi-turn stdin path against the expected JSONL
-  contract and verify tmux cleanup.
+  --verbose` path, finite multi-turn stdin path, and JSON array output against
+  the expected contract and verify tmux cleanup.
 - Unit tests cover signal exit-code mapping and pre-start SDK abort behavior.
 - Redacted native `claude -p --model haiku` fixtures cover `text`, `json`, and
   `stream-json --verbose`. The stream fixture captures the current native event

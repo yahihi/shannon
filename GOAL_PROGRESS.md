@@ -45,7 +45,7 @@ Agent SDK parity still have documented gaps.
 | Open a new tmux session | `runShannon()` creates `shannon-<uuid>` tmux session. | Implemented |
 | Launch Claude CLI there | `tmux new-session -d -s ... -c <cwd> claude ...`. | Implemented |
 | Discover session id | `waitForSessionWithPrompt()` finds the new transcript under `~/.claude/projects/<cwd-key>/<session>.jsonl` and derives the id from the filename. | Implemented |
-| Stream JSONL events | `stream-json` emits optional hook responses, `system/init`, `assistant`, `result`, and final Shannon metadata. | Partial parity |
+| Stream JSONL events | `stream-json` emits optional hook lifecycle rows, `system/init`, `assistant`, `result`, and final Shannon metadata. | Partial parity |
 | Kill tmux / print session info | `finally` kills tmux; `shannon_session/metadata` includes session id, transcript path, tmux session, cwd, and cleanup status. | Implemented |
 | Conversation continuation | Finite multi-turn stdin is live-tested in one session; true live bidi and full resume semantics remain. | Partial |
 | Validate `claude` and `tmux` | `validateRuntime()` and tests. Local versions: Claude Code `2.1.140`, tmux `3.6a`. | Implemented |
@@ -53,7 +53,7 @@ Agent SDK parity still have documented gaps.
 | Cleanup on interruption | SIGINT/SIGTERM handlers share the tmux cleanup path and use conventional exit codes. | Implemented |
 | Use Commander | `parseArgs()` uses `commander`. | Implemented |
 | Publish package as `@humanlayer/shannon` | `package.json` name is `@humanlayer/shannon`, bin/export metadata exists. Not published. | Partial |
-| Publish `@humanlayer/shannon-agent-sdk` | Not present. | Missing |
+| Publish `@humanlayer/shannon-agent-sdk` | `packages/shannon-agent-sdk` exists and packs as a thin facade. Not published and not full Agent SDK parity. | Partial |
 | Push public GitHub repo | repository metadata points at `humanlayer/shannon`; no release/push evidence in this checkout. | Missing |
 | SDK `query()` | `src/sdk.ts` exports async iterable `query()`, JSONL parser, and option mapping. | Partial |
 | Full zod schemas | Zod schemas are exported for the current Shannon SDK messages/options/query params; full Claude Agent SDK schema parity is not complete. | Partial |
@@ -64,13 +64,18 @@ Agent SDK parity still have documented gaps.
 
 - `bun test`
   - Passes: 21 tests.
-  - Skips: 2 live tests unless `SHANNON_LIVE=1`.
+  - Skips: 3 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
+- `bun pm pack --dry-run`
+  - Passes for `@humanlayer/shannon`.
+- `cd packages/shannon-agent-sdk && bun pm pack --dry-run`
+  - Passes for `@humanlayer/shannon-agent-sdk`.
 - `SHANNON_LIVE=1 bun test src/test/learning/shannon-live.test.ts`
-  - Passes: 2 live tests.
+  - Passes: 3 live tests.
   - Covers single-turn stream JSON and finite multi-turn stream JSON in one
-    session, session consistency, result turns, metadata, and tmux cleanup.
+    session, JSON array output, session consistency, result turns, metadata,
+    and tmux cleanup.
 - Native fixture:
   - `src/test/fixtures/claude-p-haiku-stream-json.fixture.jsonl`
   - `src/test/fixtures/claude-p-haiku-json.fixture.json`
@@ -91,6 +96,8 @@ Agent SDK parity still have documented gaps.
 - `shannon -p`, positional prompt, text stdin, and finite
   `--input-format=stream-json`.
 - `--output-format=stream-json`, `json`, and `text`.
+- `--output-format=json` now emits one JSON array of supported message rows,
+  matching native `claude -p` output framing.
 - `--replay-user-messages`.
 - Commander-based parsing and broad Claude flag forwarding.
 - tmux lifecycle management and cleanup in `finally`.
@@ -98,6 +105,7 @@ Agent SDK parity still have documented gaps.
 - prompt-bound transcript discovery to avoid attaching to another concurrent
   Shannon run in the same cwd.
 - transcript row translation for assistant rows and hook success attachments.
+- synthesized `system/hook_started` rows before translated hook responses.
 - synthesized init/result rows and Shannon metadata row.
 - SDK facade with `query()`, async iterable stdout parsing, string prompts,
   async iterable user-message input, and option-to-flag mapping.
@@ -105,6 +113,8 @@ Agent SDK parity still have documented gaps.
 - Zod schemas for current Shannon SDK message, option, and query parameter
   validation.
 - Native `claude -p` text, json, and stream-json fixture shape tests for Haiku.
+- `packages/shannon-agent-sdk` thin package facade for the implemented Shannon
+  SDK surface.
 - Live conformance tests for single-turn and finite multi-turn execution.
 - README usage for CLI and SDK.
 
@@ -124,8 +134,10 @@ Agent SDK parity still have documented gaps.
 - `--include-partial-messages` is accepted/forwarded but partial message stream
   rows are not synthesized from interactive transcripts.
 - Hook lifecycle parity is partial:
+  - `hook_started` is synthesized from durable `hook_success` attachments.
   - `hook_response` is translated from durable `hook_success` attachments.
-  - `hook_started` has not been observed as a durable interactive transcript row.
+  - Other hook lifecycle variants have not been observed as durable interactive
+    transcript rows.
 - `--input-format=stream-json` supports finite multi-turn input, not open-ended
   live bidirectional stdin.
 - SDK callback/runtime features are missing:
@@ -143,7 +155,8 @@ Agent SDK parity still have documented gaps.
   - `--session-id`
 - Zod schemas cover Shannon's current SDK surface, but not the full Claude
   Agent SDK schema set yet.
-- No `@humanlayer/shannon-agent-sdk` package yet.
+- `@humanlayer/shannon-agent-sdk` exists as a thin facade, but it is not
+  published and does not implement missing Agent SDK runtime features.
 - No CI, license, npm publish evidence, or confirmed GitHub push from this
   checkout.
 

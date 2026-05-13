@@ -10,6 +10,9 @@
 
     // Bundler mode
     "moduleResolution": "bundler",
+    "paths": {
+      "@humanlayer/shannon": ["./src/sdk.ts"]
+    },
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
     "noEmit": true,

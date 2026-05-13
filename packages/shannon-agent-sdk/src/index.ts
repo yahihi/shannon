@@ -1,0 +1,15 @@
+export {
+  query,
+  parseJsonlStream,
+  optionsToCliArgs,
+  shannonMessageSchema,
+  shannonOutputFormatSchema,
+  shannonQueryOptionsSchema,
+  shannonQueryParamsSchema,
+  shannonTextBlockSchema,
+  shannonUserMessageSchema,
+  type QueryOptions,
+  type QueryParams,
+  type ShannonMessage,
+  type ShannonUserMessage,
+} from "@humanlayer/shannon";

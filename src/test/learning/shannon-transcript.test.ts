@@ -18,6 +18,7 @@ import {
   textFromContent,
   toSdkAssistant,
   toSdkHookResponse,
+  toSdkHookStarted,
   toSdkInit,
   toSdkResult,
   toShannonMetadata,
@@ -162,22 +163,32 @@ test("translates an interactive assistant row into SDK-ish assistant and result 
 });
 
 test("translates interactive hook success attachments into hook response stream rows", () => {
-  expect(
-    toSdkHookResponse({
-      type: "attachment",
-      uuid: "hook-row-1",
-      sessionId: "session-1",
-      attachment: {
-        type: "hook_success",
-        hookName: "SessionStart:startup",
-        hookEvent: "SessionStart",
-        toolUseID: "hook-1",
-        stdout: "ok\n",
-        stderr: "",
-        exitCode: 0,
-      },
-    }),
-  ).toEqual({
+  const row = {
+    type: "attachment",
+    uuid: "hook-row-1",
+    sessionId: "session-1",
+    attachment: {
+      type: "hook_success",
+      hookName: "SessionStart:startup",
+      hookEvent: "SessionStart",
+      toolUseID: "hook-1",
+      stdout: "ok\n",
+      stderr: "",
+      exitCode: 0,
+    },
+  };
+
+  expect(toSdkHookStarted(row)).toEqual({
+    type: "system",
+    subtype: "hook_started",
+    hook_id: "hook-1",
+    hook_name: "SessionStart:startup",
+    hook_event: "SessionStart",
+    uuid: "hook-row-1",
+    session_id: "session-1",
+  });
+
+  expect(toSdkHookResponse(row)).toEqual({
     type: "system",
     subtype: "hook_response",
     hook_id: "hook-1",

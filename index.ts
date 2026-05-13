@@ -307,6 +307,21 @@ export function toSdkHookResponse(row: TranscriptRow): JsonRecord | undefined {
   };
 }
 
+export function toSdkHookStarted(row: TranscriptRow): JsonRecord | undefined {
+  const attachment = row.attachment;
+  if (attachment?.type !== "hook_success") return undefined;
+
+  return {
+    type: "system",
+    subtype: "hook_started",
+    hook_id: attachment.toolUseID ?? row.uuid ?? randomUUID(),
+    hook_name: attachment.hookName ?? "unknown",
+    hook_event: attachment.hookEvent ?? "unknown",
+    uuid: row.uuid ?? randomUUID(),
+    session_id: row.sessionId ?? row.session_id,
+  };
+}
+
 export function toSdkInit(meta: SessionMetadata, rows: TranscriptRow[]): JsonRecord {
   const userRow = rows.find((row) => row.type === "user");
   const versionedRow = rows.find((row) => typeof row.version === "string");
@@ -483,6 +498,15 @@ export async function runShannon(options: CliOptions) {
         transcriptRowCount = 0;
 
         for (const row of discovery.rows) {
+          const hookStarted = toSdkHookStarted(row);
+          if (hookStarted) {
+            if (options.outputFormat === "stream-json") {
+              emitJson(hookStarted);
+            } else if (options.outputFormat === "json") {
+              jsonMessages.push(hookStarted);
+            }
+          }
+
           const hookResponse = toSdkHookResponse(row);
           if (!hookResponse) continue;
           if (options.outputFormat === "stream-json") {

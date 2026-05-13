@@ -1,0 +1,19 @@
+{
+  "name": "@humanlayer/shannon-agent-sdk",
+  "version": "0.0.0",
+  "description": "Claude Agent SDK-compatible facade for Shannon.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "src/index.ts",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/humanlayer/shannon.git",
+    "directory": "packages/shannon-agent-sdk"
+  },
+  "private": false
+}
