@@ -1,12 +1,38 @@
 {
-  "name": "shannon",
+  "name": "@humanlayer/shannon",
+  "version": "0.0.0",
+  "description": "CLI and SDK wrapper that drives interactive Claude Code through tmux and emits stream-json.",
   "module": "index.ts",
   "type": "module",
-  "private": true,
+  "bin": {
+    "shannon": "./index.ts"
+  },
+  "exports": {
+    ".": "./src/sdk.ts",
+    "./cli": "./index.ts"
+  },
+  "scripts": {
+    "test": "bun test",
+    "typecheck": "bunx tsc --noEmit"
+  },
+  "files": [
+    "index.ts",
+    "src/sdk.ts",
+    "README.md"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/humanlayer/shannon.git"
+  },
+  "private": false,
   "devDependencies": {
     "@types/bun": "latest"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.140",
+    "commander": "^14.0.3"
   }
 }

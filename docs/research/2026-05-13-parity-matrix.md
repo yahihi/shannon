@@ -1,0 +1,117 @@
+# Shannon Parity Matrix
+
+Date: 2026-05-13
+
+## Target Surfaces
+
+Shannon has two parity targets:
+
+1. `claude -p` CLI behavior for non-interactive prompt execution.
+2. Claude Agent SDK `query()` ergonomics: async iterable message stream plus options mapping.
+
+## Implemented CLI Surface
+
+Core:
+
+- `-p, --print <prompt>`
+- positional prompt
+- `--output-format=stream-json`
+- `--output-format=json`
+- `--output-format=text`
+- `--input-format=stream-json` for the first user message from stdin
+- `--verbose`
+- `--replay-user-messages`
+
+Session/control flags accepted and forwarded to the underlying interactive
+`claude` process:
+
+- `--add-dir`
+- `--agent`
+- `--agents`
+- `--allow-dangerously-skip-permissions`
+- `--allowed-tools` / `--allowedTools`
+- `--append-system-prompt`
+- `--bare`
+- `--betas`
+- `--brief`
+- `--chrome` / `--no-chrome`
+- `--continue`
+- `--dangerously-skip-permissions`
+- `--debug`
+- `--debug-file`
+- `--disable-slash-commands`
+- `--disallowed-tools` / `--disallowedTools`
+- `--effort`
+- `--exclude-dynamic-system-prompt-sections`
+- `--fallback-model`
+- `--file`
+- `--fork-session`
+- `--ide`
+- `--include-hook-events`
+- `--include-partial-messages`
+- `--json-schema`
+- `--max-budget-usd`
+- `--mcp-config`
+- `--mcp-debug`
+- `--model`
+- `--name`
+- `--no-session-persistence`
+- `--permission-mode`
+- `--plugin-dir`
+- `--plugin-url`
+- `--replay-user-messages`
+- `--resume`
+- `--session-id`
+- `--setting-sources`
+- `--settings`
+- `--strict-mcp-config`
+- `--system-prompt`
+- `--tools`
+
+## Implemented Stream Rows
+
+- `system/hook_response` from interactive `hook_success` attachments.
+- `system/init`, synthesized from transcript metadata.
+- `assistant`, translated from transcript assistant rows.
+- `result/success`, synthesized from the assistant row.
+- `shannon_session/metadata`, extra Shannon final row with transcript and cleanup data.
+
+## Live Findings Added During Conformance Work
+
+- Transcript discovery must bind by submitted prompt, not just newest transcript
+  file. Concurrent Shannon runs in the same cwd can otherwise attach to each
+  other's sessions.
+- `tmux send-keys C-m` is more reliable than `Enter` after paste-buffer for
+  submitting the prompt in Claude's input box.
+- `--output-format=json` and `--output-format=text` should not emit the extra
+  stream rows or final Shannon metadata row; those are stream-json-only.
+- The initial `--input-format=stream-json` implementation supports the first
+  stdin user message and `--replay-user-messages`.
+
+## Known Gaps
+
+- Native `claude -p` emits exact `system/init` tools, MCP server, model, agents,
+  skills, plugins, memory paths, and API key source. Interactive transcripts do
+  not currently provide all of that in one durable row, so Shannon still emits
+  placeholders for some fields.
+- Native `claude -p` emits `rate_limit_event`; Shannon does not yet reconstruct
+  this from transcript data.
+- Native costs are not persisted in a directly equivalent transcript row, so
+  synthesized `result.total_cost_usd` and `modelUsage.*.costUSD` remain `0`.
+- Full bidi `--input-format=stream-json` is not implemented yet. Shannon's
+  current CLI and SDK support the first stdin/async user message, then complete
+  a single turn.
+- Programmatic permission callbacks, MCP SDK server instances, hook callback
+  functions, custom process spawning, warm query sessions, and session stores
+  require an in-process SDK runtime, not just CLI flag forwarding.
+
+## Conformance Strategy
+
+- Unit-level conformance tests cover argument parsing, SDK option-to-flag
+  mapping, transcript row translation, JSONL parsing, and metadata shape.
+- Live smoke tests compare the real `shannon -p ... --output-format=stream-json
+  --verbose` path against the expected JSONL event sequence and verify tmux
+  cleanup.
+- Future parity work should add fixtures from native `claude -p` for each flag
+  family and assert Shannon either matches the row shape or documents the
+  transcript limitation.
