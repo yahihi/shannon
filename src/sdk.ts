@@ -26,9 +26,12 @@ export type QueryOptions = {
   additionalDirectories?: string[];
   agent?: string;
   agents?: Record<string, unknown>;
+  bare?: boolean;
   allowedTools?: string[];
   appendSystemPrompt?: string;
   betas?: string[];
+  brief?: boolean;
+  chrome?: boolean;
   continue?: boolean;
   debug?: boolean | string;
   debugFile?: string;
@@ -40,17 +43,23 @@ export type QueryOptions = {
   fromPr?: string | boolean;
   includeHookEvents?: boolean;
   includePartialMessages?: boolean;
+  jsonSchema?: string | Record<string, unknown>;
   maxBudgetUsd?: number;
+  mcpDebug?: boolean;
   mcpConfig?: string[];
   model?: string;
   name?: string;
   pathToClaudeCodeExecutable?: string;
   permissionMode?: "acceptEdits" | "auto" | "bypassPermissions" | "default" | "dontAsk" | "plan";
+  pluginDir?: string[];
+  pluginUrl?: string[];
   remoteControl?: string | boolean;
   remoteControlSessionNamePrefix?: string;
   resume?: string | boolean;
   sessionId?: string;
+  settingSources?: string;
   settings?: string | Record<string, unknown>;
+  strictMcpConfig?: boolean;
   systemPrompt?: string;
   tools?: string[];
   tmux?: string | boolean;
@@ -236,9 +245,12 @@ export const shannonQueryOptionsSchema = z.object({
   additionalDirectories: z.array(z.string()).optional(),
   agent: z.string().optional(),
   agents: z.record(z.string(), z.unknown()).optional(),
+  bare: z.boolean().optional(),
   allowedTools: z.array(z.string()).optional(),
   appendSystemPrompt: z.string().optional(),
   betas: z.array(z.string()).optional(),
+  brief: z.boolean().optional(),
+  chrome: z.boolean().optional(),
   continue: z.boolean().optional(),
   debug: z.union([z.boolean(), z.string()]).optional(),
   debugFile: z.string().optional(),
@@ -250,17 +262,23 @@ export const shannonQueryOptionsSchema = z.object({
   fromPr: z.union([z.string(), z.boolean()]).optional(),
   includeHookEvents: z.boolean().optional(),
   includePartialMessages: z.boolean().optional(),
+  jsonSchema: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
   maxBudgetUsd: z.number().optional(),
+  mcpDebug: z.boolean().optional(),
   mcpConfig: z.array(z.string()).optional(),
   model: z.string().optional(),
   name: z.string().optional(),
   pathToClaudeCodeExecutable: z.string().optional(),
   permissionMode: z.enum(["acceptEdits", "auto", "bypassPermissions", "default", "dontAsk", "plan"]).optional(),
+  pluginDir: z.array(z.string()).optional(),
+  pluginUrl: z.array(z.string()).optional(),
   remoteControl: z.union([z.string(), z.boolean()]).optional(),
   remoteControlSessionNamePrefix: z.string().optional(),
   resume: z.union([z.string(), z.boolean()]).optional(),
   sessionId: z.string().optional(),
+  settingSources: z.string().optional(),
   settings: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
+  strictMcpConfig: z.boolean().optional(),
   systemPrompt: z.string().optional(),
   tools: z.array(z.string()).optional(),
   tmux: z.union([z.string(), z.boolean()]).optional(),
@@ -372,7 +390,10 @@ export function optionsToCliArgs(options: QueryOptions): string[] {
   addBoolean(args, "--allow-dangerously-skip-permissions", options.allowDangerouslySkipPermissions);
   addRepeated(args, "--allowed-tools", options.allowedTools);
   addString(args, "--append-system-prompt", options.appendSystemPrompt);
+  addBoolean(args, "--bare", options.bare);
   addRepeated(args, "--betas", options.betas);
+  addBoolean(args, "--brief", options.brief);
+  addChrome(args, options.chrome);
   addBoolean(args, "--continue", options.continue);
   addOptionalString(args, "--debug", options.debug);
   addString(args, "--debug-file", options.debugFile);
@@ -383,17 +404,23 @@ export function optionsToCliArgs(options: QueryOptions): string[] {
   addOptionalString(args, "--from-pr", options.fromPr);
   addBoolean(args, "--include-hook-events", options.includeHookEvents);
   addBoolean(args, "--include-partial-messages", options.includePartialMessages);
+  addJsonOrString(args, "--json-schema", options.jsonSchema);
   addString(args, "--max-budget-usd", options.maxBudgetUsd);
   addRepeated(args, "--mcp-config", options.mcpConfig);
+  addBoolean(args, "--mcp-debug", options.mcpDebug);
   addString(args, "--model", options.model);
   addString(args, "--name", options.name);
   addString(args, "--path-to-claude-code-executable", options.pathToClaudeCodeExecutable);
   addString(args, "--permission-mode", options.permissionMode);
+  addRepeatedFlag(args, "--plugin-dir", options.pluginDir);
+  addRepeatedFlag(args, "--plugin-url", options.pluginUrl);
   addOptionalString(args, "--remote-control", options.remoteControl);
   addString(args, "--remote-control-session-name-prefix", options.remoteControlSessionNamePrefix);
   addOptionalString(args, "--resume", options.resume);
   addString(args, "--session-id", options.sessionId);
+  addString(args, "--setting-sources", options.settingSources);
   addSettings(args, options.settings);
+  addBoolean(args, "--strict-mcp-config", options.strictMcpConfig);
   addString(args, "--system-prompt", options.systemPrompt);
   addRepeated(args, "--tools", options.tools);
   addOptionalString(args, "--tmux", options.tmux);
@@ -436,11 +463,28 @@ function addRepeated(args: string[], flag: string, value: unknown) {
   if (Array.isArray(value) && value.length > 0) args.push(flag, ...value.map(String));
 }
 
+function addRepeatedFlag(args: string[], flag: string, value: unknown) {
+  if (!Array.isArray(value)) return;
+  for (const item of value) {
+    if (typeof item === "string" && item.length > 0) args.push(flag, item);
+  }
+}
+
 function addJson(args: string[], flag: string, value: unknown) {
   if (value && typeof value === "object") args.push(flag, JSON.stringify(value));
+}
+
+function addJsonOrString(args: string[], flag: string, value: unknown) {
+  if (typeof value === "string" && value.length > 0) args.push(flag, value);
+  else if (value && typeof value === "object") args.push(flag, JSON.stringify(value));
 }
 
 function addSettings(args: string[], value: unknown) {
   if (typeof value === "string") args.push("--settings", value);
   else if (value && typeof value === "object") args.push("--settings", JSON.stringify(value));
+}
+
+function addChrome(args: string[], value: unknown) {
+  if (value === true) args.push("--chrome");
+  else if (value === false) args.push("--no-chrome");
 }

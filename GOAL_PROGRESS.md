@@ -54,7 +54,7 @@ Agent SDK parity still have documented gaps.
 | Use Commander | `parseArgs()` uses `commander`. | Implemented |
 | Publish package | Current package metadata is `@dexh/shannon`; npm reports `@dexh/shannon@0.0.2`. Original spec named `@humanlayer/shannon`, so namespace parity depends on the chosen package target. | Partial |
 | Publish agent SDK facade | Current package metadata is `@dexh/shannon-agent-sdk`; npm reports `@dexh/shannon-agent-sdk@0.0.1`. Full Agent SDK parity is still incomplete. | Partial |
-| Push public GitHub repo | `git push origin main` succeeded; `origin/main` resolves to `c2593eb508b38341bf9232d3d19170681527a1a8` on `git@github.com:dexhorthy/shannon.git`. Original spec named `humanlayer/shannon`, so repo namespace parity depends on the chosen target. | Partial |
+| Push public GitHub repo | `git push origin main` succeeded; `origin/main` resolves to `09fb5c65b437c94308afbe3235f905f719b7e409` on `git@github.com:dexhorthy/shannon.git`. Original spec named `humanlayer/shannon`, so repo namespace parity depends on the chosen target. | Partial |
 | SDK `query()` | `src/sdk.ts` exports async iterable `query()`, JSONL parser, and option mapping. | Partial |
 | Full zod schemas | Zod schemas are exported for the current Shannon SDK messages/options/query params; full Claude Agent SDK schema parity is not complete. | Partial |
 | Every `claude -p` / Agent SDK feature | Broad flags are accepted/forwarded and tests exist, but exact stream fields, callbacks, MCP server objects, session stores, warm queries, and full schemas are incomplete. | Partial |
@@ -82,7 +82,7 @@ Agent SDK parity still have documented gaps.
 - `bun pm view @dexh/shannon-agent-sdk version`
   - Reports `0.0.1`.
 - `git ls-remote --heads origin main`
-  - Reports `c2593eb508b38341bf9232d3d19170681527a1a8`.
+  - Reports `09fb5c65b437c94308afbe3235f905f719b7e409`.
 - CI:
   - `.github/workflows/ci.yml` runs install, tests, typecheck, and package
     dry-runs for both packages.
@@ -140,7 +140,8 @@ Agent SDK parity still have documented gaps.
 - synthesized init/result rows and Shannon metadata row.
 - approximate model/token cost reconstruction for known Claude model families.
 - SDK facade with `query()`, async iterable stdout parsing, string prompts,
-  async iterable user-message input, and option-to-flag mapping.
+  async iterable user-message input, and broad option-to-flag mapping for
+  supported Shannon/Claude flags.
 - SDK `env` support for passing environment variables into the Shannon
   subprocess and inherited Claude process.
 - SDK `AbortController` support for cancelling the Shannon subprocess.
