@@ -153,8 +153,8 @@ Agent SDK parity still have documented gaps.
 - SDK `query()` returns an Agent SDK-like async iterable object with
   `interrupt()` and `close()` methods wired to subprocess cancellation.
 - Zod schemas for current Shannon SDK message rows, native rate-limit event,
-  selected additional Agent SDK stream variants, option, and query parameter
-  validation.
+  selected additional Agent SDK stream/control variants, option, and query
+  parameter validation.
 - Native `claude -p` text, json, and stream-json fixture shape tests for Haiku.
 - `packages/shannon-agent-sdk` thin package facade for the implemented Shannon
   SDK surface.
@@ -225,8 +225,8 @@ Agent SDK parity still have documented gaps.
   - `--fork-session` is live-tested when resuming into a caller-provided fork
     session id.
 - Zod schemas cover Shannon's current emitted message rows, selected additional
-  Agent SDK stream variants, and SDK surface, but not the full Claude Agent SDK
-  schema set yet.
+  Agent SDK stream/control variants, and SDK surface, but not the full Claude
+  Agent SDK schema set yet.
 - `@dexh/shannon-agent-sdk` exists and is published as a thin facade, but it
   does not implement missing Agent SDK runtime features.
 - Publishing the current source package revisions is blocked on npm 2FA; an

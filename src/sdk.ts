@@ -220,6 +220,31 @@ export const shannonNotificationMessageSchema = z.object({
   uuid: z.string(),
 }).catchall(z.unknown());
 
+export const shannonControlRequestSchema = z.object({
+  type: z.literal("control_request"),
+  request_id: z.string(),
+  request: z.object({
+    subtype: z.string(),
+  }).catchall(z.unknown()),
+}).catchall(z.unknown());
+
+export const shannonControlResponseSchema = z.object({
+  type: z.literal("control_response"),
+  response: z.union([
+    z.object({
+      subtype: z.literal("success"),
+      request_id: z.string(),
+      response: z.record(z.string(), z.unknown()).optional(),
+    }).catchall(z.unknown()),
+    z.object({
+      subtype: z.literal("error"),
+      request_id: z.string(),
+      error: z.string(),
+      pending_permission_requests: z.array(shannonControlRequestSchema).optional(),
+    }).catchall(z.unknown()),
+  ]),
+}).catchall(z.unknown());
+
 export const shannonSessionMetadataSchema = z.object({
   type: z.literal("shannon_session"),
   subtype: z.literal("metadata"),
@@ -275,6 +300,8 @@ export const shannonStreamMessageSchema = z.union([
   shannonResultMessageSchema,
   shannonStatusMessageSchema,
   shannonNotificationMessageSchema,
+  shannonControlRequestSchema,
+  shannonControlResponseSchema,
   shannonSessionMetadataSchema,
   shannonRateLimitEventSchema,
 ]);

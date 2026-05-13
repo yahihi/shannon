@@ -15,6 +15,8 @@ import {
   parseJsonlStream,
   query,
   shannonAssistantMessageSchema,
+  shannonControlRequestSchema,
+  shannonControlResponseSchema,
   shannonHookResponseSchema,
   shannonHookStartedSchema,
   shannonMessageSchema,
@@ -382,5 +384,51 @@ test("exports schemas for additional Agent SDK stream message variants", () => {
   ).toMatchObject({
     type: "system",
     subtype: "notification",
+  });
+
+  expect(
+    shannonControlRequestSchema.parse({
+      type: "control_request",
+      request_id: "request-1",
+      request: { subtype: "interrupt" },
+    }),
+  ).toMatchObject({
+    type: "control_request",
+    request: { subtype: "interrupt" },
+  });
+
+  expect(
+    shannonControlResponseSchema.parse({
+      type: "control_response",
+      response: {
+        subtype: "success",
+        request_id: "request-1",
+        response: { ok: true },
+      },
+    }),
+  ).toMatchObject({
+    type: "control_response",
+    response: { subtype: "success" },
+  });
+
+  expect(
+    shannonControlResponseSchema.parse({
+      type: "control_response",
+      response: {
+        subtype: "error",
+        request_id: "request-2",
+        error: "denied",
+        pending_permission_requests: [
+          {
+            type: "control_request",
+            request_id: "request-3",
+            request: { subtype: "can_use_tool", tool_name: "Read" },
+          },
+        ],
+      },
+    }),
+  ).toMatchObject({
+    type: "control_response",
+    response: { subtype: "error" },
   });
 });

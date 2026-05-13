@@ -3,6 +3,8 @@ export {
   parseJsonlStream,
   optionsToCliArgs,
   shannonAssistantMessageSchema,
+  shannonControlRequestSchema,
+  shannonControlResponseSchema,
   shannonHookResponseSchema,
   shannonHookStartedSchema,
   shannonMessageSchema,
