@@ -22,6 +22,7 @@ import {
   rowContainsPromptAfter,
   signalExitCode,
   skillNamesFromListing,
+  stringFlagFromClaudeArgs,
   textFromContent,
   toSdkAssistant,
   toSdkHookResponse,
@@ -471,6 +472,7 @@ test("synthesizes init from transcript metadata when available", () => {
 test("uses requested model in init before transcript assistant model is available", () => {
   expect(modelFromClaudeArgs(["--model", "haiku"])).toBe("haiku");
   expect(modelFromClaudeArgs(["--model=sonnet"])).toBe("sonnet");
+  expect(stringFlagFromClaudeArgs(["--permission-mode", "plan"], "--permission-mode")).toBe("plan");
 
   expect(
     toSdkInit(
@@ -481,13 +483,15 @@ test("uses requested model in init before transcript assistant model is availabl
         tmuxSession: "shannon-test",
         cwd: "/repo",
         requestedModel: "haiku",
+        requestedPermissionMode: "plan",
       },
-      [{ type: "user", permissionMode: "auto" }],
+      [{ type: "user" }],
     ),
   ).toMatchObject({
     type: "system",
     subtype: "init",
     model: "haiku",
+    permissionMode: "plan",
   });
 });
 

@@ -138,6 +138,9 @@ Agent SDK parity still have documented gaps.
   `mcp_instructions_delta` attachments when present.
 - `system/init.model` uses the transcript assistant model when available, or
   the requested `--model` value before an assistant row has been observed.
+- `system/init.permissionMode` uses the transcript user row value when
+  available, or the requested `--permission-mode` value before that row exposes
+  it.
 - synthesized `system/hook_started` rows before translated hook responses.
 - synthesized init/result rows and Shannon metadata row.
 - approximate model/token cost reconstruction for known Claude model families.
@@ -182,6 +185,9 @@ Agent SDK parity still have documented gaps.
   - `model` uses a transcript assistant model when available and falls back to
     the requested `--model` value, but can still be `"unknown"` if neither
     source is present.
+  - `permissionMode` uses the transcript user row value or requested
+    `--permission-mode`, but can still be `"unknown"` if neither source is
+    present.
   - `apiKeySource`, `output_style`, `agents`, and `plugins` are emitted with
     native-shaped defaults, but are not fully reconstructed from the running
     session.

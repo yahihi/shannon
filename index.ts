@@ -55,6 +55,7 @@ type SessionMetadata = {
   tmuxSession: string;
   cwd: string;
   requestedModel?: string;
+  requestedPermissionMode?: string;
 };
 
 type SessionDiscovery = {
@@ -338,10 +339,14 @@ function addRepeatedFlag(args: string[], flag: string, value: unknown) {
 }
 
 export function modelFromClaudeArgs(args: string[]): string | undefined {
+  return stringFlagFromClaudeArgs(args, "--model");
+}
+
+export function stringFlagFromClaudeArgs(args: string[], flag: string): string | undefined {
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
-    if (arg === "--model") return args[i + 1];
-    if (arg?.startsWith("--model=")) return arg.slice("--model=".length);
+    if (arg === flag) return args[i + 1];
+    if (arg?.startsWith(`${flag}=`)) return arg.slice(flag.length + 1);
   }
   return undefined;
 }
@@ -421,7 +426,9 @@ export function toSdkInit(meta: SessionMetadata, rows: TranscriptRow[]): JsonRec
     tools,
     mcp_servers: mcpServers,
     model: assistantRow?.message?.model ?? meta.requestedModel ?? "unknown",
-    permissionMode: typeof userRow?.permissionMode === "string" ? userRow.permissionMode : "unknown",
+    permissionMode: typeof userRow?.permissionMode === "string"
+      ? userRow.permissionMode
+      : meta.requestedPermissionMode ?? "unknown",
     apiKeySource: "none",
     claude_code_version: typeof versionedRow?.version === "string" ? versionedRow.version : undefined,
     output_style: "default",
@@ -717,6 +724,7 @@ export async function runShannon(options: CliOptions) {
         meta = {
           ...discovery.meta,
           requestedModel: modelFromClaudeArgs(options.claudeArgs),
+          requestedPermissionMode: stringFlagFromClaudeArgs(options.claudeArgs, "--permission-mode"),
         };
         transcriptRowCount = 0;
 
