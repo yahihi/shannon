@@ -118,6 +118,9 @@ bun run typecheck
 ```
 
 CI runs the same non-live checks plus package dry-runs for both packages.
+The publish workflow publishes `@humanlayer/shannon` and
+`@humanlayer/shannon-agent-sdk` from a GitHub release or manual dispatch when
+`NPM_TOKEN` is configured.
 
 Run the CLI directly:
 

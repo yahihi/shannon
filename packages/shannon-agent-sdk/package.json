@@ -3,13 +3,24 @@
   "version": "0.0.0",
   "description": "Claude Agent SDK-compatible facade for Shannon.",
   "license": "MIT",
+  "homepage": "https://github.com/humanlayer/shannon/tree/main/packages/shannon-agent-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/humanlayer/shannon/issues"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "agent-sdk",
+    "shannon"
+  ],
   "type": "module",
   "exports": {
     ".": "./src/index.ts"
   },
   "files": [
     "src/index.ts",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "repository": {
     "type": "git",

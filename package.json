@@ -3,6 +3,17 @@
   "version": "0.0.0",
   "description": "CLI and SDK wrapper that drives interactive Claude Code through tmux and emits stream-json.",
   "license": "MIT",
+  "homepage": "https://github.com/humanlayer/shannon#readme",
+  "bugs": {
+    "url": "https://github.com/humanlayer/shannon/issues"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "agent-sdk",
+    "tmux",
+    "cli"
+  ],
   "module": "index.ts",
   "type": "module",
   "bin": {
@@ -17,7 +28,8 @@
   ],
   "scripts": {
     "test": "bun test",
-    "typecheck": "bunx tsc --noEmit"
+    "typecheck": "bunx tsc --noEmit",
+    "pack:check": "bun pm pack --dry-run && (cd packages/shannon-agent-sdk && bun pm pack --dry-run)"
   },
   "files": [
     "index.ts",
