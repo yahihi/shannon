@@ -353,6 +353,7 @@ export function toSdkInit(meta: SessionMetadata, rows: TranscriptRow[]): JsonRec
   const userRow = rows.find((row) => row.type === "user");
   const versionedRow = rows.find((row) => typeof row.version === "string");
   const assistantRow = rows.find((row) => typeof row.message?.model === "string");
+  const skillNames = skillNamesFromRows(rows);
 
   return {
     type: "system",
@@ -364,8 +365,36 @@ export function toSdkInit(meta: SessionMetadata, rows: TranscriptRow[]): JsonRec
     model: assistantRow?.message?.model ?? "unknown",
     permissionMode: typeof userRow?.permissionMode === "string" ? userRow.permissionMode : "unknown",
     claude_code_version: typeof versionedRow?.version === "string" ? versionedRow.version : undefined,
+    slash_commands: skillNames,
+    skills: skillNames,
     uuid: randomUUID(),
   };
+}
+
+export function skillNamesFromRows(rows: TranscriptRow[]): string[] {
+  const names = new Set<string>();
+
+  for (const row of rows) {
+    if (row.attachment?.type !== "skill_listing" || typeof row.attachment.content !== "string") continue;
+    for (const name of skillNamesFromListing(row.attachment.content)) {
+      names.add(name);
+    }
+  }
+
+  return [...names];
+}
+
+export function skillNamesFromListing(content: string): string[] {
+  const names: string[] = [];
+
+  for (const line of content.split("\n")) {
+    const match = /^-\s+(.+?)(?::\s|\s*$)/.exec(line);
+    if (!match) continue;
+    const name = match[1]?.trim();
+    if (name) names.push(name);
+  }
+
+  return names;
 }
 
 export function toSdkResult(row: TranscriptRow, startedAt: number, numTurns = 1): JsonRecord {

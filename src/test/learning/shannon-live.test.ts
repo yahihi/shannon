@@ -81,6 +81,8 @@ runLive("live Shannon conformance", () => {
     expect(metadata).toBeDefined();
 
     expect(init!).toMatchObject({ type: "system", subtype: "init" });
+    expect(Array.isArray(init!.skills)).toBe(true);
+    expect(Array.isArray(init!.slash_commands)).toBe(true);
     expect(assistant!).toMatchObject({ type: "assistant" });
     expect(result!).toMatchObject({ type: "result", subtype: "success", num_turns: 1 });
     expect(metadata!).toMatchObject({

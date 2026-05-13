@@ -63,7 +63,7 @@ Agent SDK parity still have documented gaps.
 ## Verification Performed
 
 - `bun test`
-  - Passes: 23 tests.
+  - Passes: 24 tests.
   - Skips: 4 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
@@ -107,6 +107,8 @@ Agent SDK parity still have documented gaps.
 - timestamp-aware transcript discovery for resumed sessions that append to an
   existing transcript file.
 - transcript row translation for assistant rows and hook success attachments.
+- `system/init.skills` and `system/init.slash_commands` reconstruction from
+  durable interactive `skill_listing` attachments.
 - synthesized `system/hook_started` rows before translated hook responses.
 - synthesized init/result rows and Shannon metadata row.
 - approximate model/token cost reconstruction for known Claude model families.
@@ -128,8 +130,8 @@ Agent SDK parity still have documented gaps.
   - `mcp_servers` is `[]`.
   - `model` uses a transcript assistant model only when one is already
     available during session discovery; otherwise it is `"unknown"`.
-  - native fields such as slash commands, agents, skills, plugins,
-    `apiKeySource`, memory paths, and output style are not fully reconstructed.
+  - native fields such as agents, plugins, `apiKeySource`, memory paths, and
+    output style are not fully reconstructed.
 - `rate_limit_event` is not reconstructed.
 - Exact billing parity is not guaranteed:
   - `total_cost_usd` and `modelUsage.*.costUSD` are estimated from transcript

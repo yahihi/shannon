@@ -17,6 +17,7 @@ import {
   projectKeyForCwd,
   rowContainsPromptAfter,
   signalExitCode,
+  skillNamesFromListing,
   textFromContent,
   toSdkAssistant,
   toSdkHookResponse,
@@ -165,6 +166,23 @@ test("extracts text from Anthropic content blocks", () => {
   );
 });
 
+test("extracts skill names from interactive skill listings", () => {
+  expect(
+    skillNamesFromListing([
+      "- pair-agent",
+      "- design-shotgun: Design shotgun: generate variants.",
+      "continuation line that should be ignored",
+      "- riptide-rpi:rpi-setup-humanlayer",
+      "- clean-coder:say-hello: Say hello world",
+    ].join("\n")),
+  ).toEqual([
+    "pair-agent",
+    "design-shotgun",
+    "riptide-rpi:rpi-setup-humanlayer",
+    "clean-coder:say-hello",
+  ]);
+});
+
 test("translates an interactive assistant row into SDK-ish assistant and result rows", () => {
   const row = {
     type: "assistant",
@@ -289,6 +307,13 @@ test("synthesizes init from transcript metadata when available", () => {
       [
         { type: "attachment", version: "2.1.140" },
         { type: "user", permissionMode: "auto" },
+        {
+          type: "attachment",
+          attachment: {
+            type: "skill_listing",
+            content: "- pair-agent\n- design-shotgun: Design shotgun\n",
+          },
+        },
         { type: "assistant", message: { role: "assistant", model: "claude-test" } },
       ],
     ),
@@ -300,6 +325,8 @@ test("synthesizes init from transcript metadata when available", () => {
     model: "claude-test",
     permissionMode: "auto",
     claude_code_version: "2.1.140",
+    slash_commands: ["pair-agent", "design-shotgun"],
+    skills: ["pair-agent", "design-shotgun"],
   });
 });
 

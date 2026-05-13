@@ -74,6 +74,8 @@ Session/control flags accepted and forwarded to the underlying interactive
 - `system/hook_started` synthesized from interactive `hook_success`
   attachments.
 - `system/init`, synthesized from transcript metadata.
+  - `skills` and `slash_commands` are reconstructed from durable
+    `skill_listing` attachments when present.
 - `assistant`, translated from transcript assistant rows.
 - `result/success`, synthesized from the assistant row.
 - `shannon_session/metadata`, extra Shannon final row with transcript and cleanup data.
@@ -98,9 +100,10 @@ Session/control flags accepted and forwarded to the underlying interactive
 ## Known Gaps
 
 - Native `claude -p` emits exact `system/init` tools, MCP server, model, agents,
-  skills, plugins, memory paths, and API key source. Interactive transcripts do
-  not currently provide all of that in one durable row, so Shannon still emits
-  placeholders for some fields.
+  skills, slash commands, plugins, memory paths, and API key source.
+  Interactive transcripts provide skill listings and later assistant model data,
+  but do not currently provide all fields in one durable row, so Shannon still
+  emits placeholders for some fields.
 - Native `claude -p` emits `rate_limit_event`; Shannon does not yet reconstruct
   this from transcript data.
 - Native exact billed costs are not persisted in a directly equivalent
