@@ -629,10 +629,10 @@ export async function runShannon(options: CliOptions) {
   const prompts = options.prompt
     ? asyncIterableFromArray([options.prompt])
     : readPromptsFromStdin(options.inputFormat);
+  const promptIterator = prompts[Symbol.asyncIterator]();
   let meta: SessionMetadata | undefined;
   let transcriptRowCount = 0;
   let cleanup: JsonRecord = { tmux_killed: false };
-  let promptReady = false;
   let promptCount = 0;
   let cleanupStarted = false;
   let metadataEmitted = false;
@@ -657,6 +657,12 @@ export async function runShannon(options: CliOptions) {
   });
 
   try {
+    let prompt = await nextPrompt(promptIterator);
+    if (!prompt) {
+      throw new Error("Expected at least one user message on stdin for --input-format=stream-json");
+    }
+
+    const firstPromptSentAt = Date.now();
     await runCommand([
       "tmux",
       "new-session",
@@ -667,26 +673,22 @@ export async function runShannon(options: CliOptions) {
       options.cwd,
       "claude",
       ...options.claudeArgs,
+      prompt,
     ]);
-    await waitForPrompt(tmuxSession);
-    promptReady = true;
 
-    for await (const prompt of prompts) {
-      if (!prompt) continue;
+    let launchedWithPrompt = true;
+    while (prompt) {
       promptCount += 1;
 
-      if (!promptReady) {
+      const promptSentAt = launchedWithPrompt ? firstPromptSentAt : Date.now();
+      if (!launchedWithPrompt) {
         await waitForPrompt(tmuxSession);
-        promptReady = true;
+        await sendPrompt(tmuxSession, prompt);
       }
 
       if (options.replayUserMessages && options.outputFormat === "stream-json") {
         emitJson(toUserReplay(prompt));
       }
-
-      const promptSentAt = Date.now();
-      await sendPrompt(tmuxSession, prompt);
-      promptReady = false;
 
       if (!meta) {
         const discovery = await waitForSessionWithPrompt(
@@ -741,10 +743,9 @@ export async function runShannon(options: CliOptions) {
       } else {
         emitOutput(options.outputFormat, turnMessages);
       }
-    }
 
-    if (promptCount === 0) {
-      throw new Error("Expected at least one user message on stdin for --input-format=stream-json");
+      launchedWithPrompt = false;
+      prompt = await nextPrompt(promptIterator);
     }
 
     if (options.outputFormat === "json") {
@@ -925,8 +926,15 @@ async function waitForPrompt(tmuxSession: string) {
 async function sendPrompt(tmuxSession: string, prompt: string) {
   await runCommand(["tmux", "set-buffer", "-b", `shannon-${tmuxSession}`, prompt]);
   await runCommand(["tmux", "paste-buffer", "-b", `shannon-${tmuxSession}`, "-t", tmuxSession]);
-  await sleep(POLL_MS);
   await runCommand(["tmux", "send-keys", "-t", tmuxSession, "C-m"]);
+}
+
+async function nextPrompt(iterator: AsyncIterator<string>): Promise<string | undefined> {
+  while (true) {
+    const next = await iterator.next();
+    if (next.done) return undefined;
+    if (next.value) return next.value;
+  }
 }
 
 async function waitForAssistantReply(
