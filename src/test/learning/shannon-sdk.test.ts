@@ -142,6 +142,7 @@ test("exports zod schemas for the current SDK surface", () => {
 
   expect(
     shannonQueryOptionsSchema.parse({
+      env: { SHANNON_TEST_ENV: "1", SHANNON_TEST_UNSET: undefined },
       outputFormat: "stream-json",
       permissionMode: "plan",
       model: "haiku",
@@ -150,6 +151,7 @@ test("exports zod schemas for the current SDK surface", () => {
       tmux: "classic",
     }),
   ).toEqual({
+    env: { SHANNON_TEST_ENV: "1", SHANNON_TEST_UNSET: undefined },
     outputFormat: "stream-json",
     permissionMode: "plan",
     model: "haiku",

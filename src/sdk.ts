@@ -34,6 +34,7 @@ export type QueryOptions = {
   debugFile?: string;
   disallowedTools?: string[];
   effort?: "low" | "medium" | "high" | "xhigh" | "max";
+  env?: Record<string, string | undefined>;
   fallbackModel?: string;
   forkSession?: boolean;
   fromPr?: string | boolean;
@@ -243,6 +244,7 @@ export const shannonQueryOptionsSchema = z.object({
   debugFile: z.string().optional(),
   disallowedTools: z.array(z.string()).optional(),
   effort: z.enum(["low", "medium", "high", "xhigh", "max"]).optional(),
+  env: z.record(z.string(), z.string().optional()).optional(),
   fallbackModel: z.string().optional(),
   forkSession: z.boolean().optional(),
   fromPr: z.union([z.string(), z.boolean()]).optional(),
@@ -330,6 +332,7 @@ async function* runQuery(
 
   const proc = Bun.spawn(args, {
     cwd: options.cwd,
+    env: options.env ? { ...Bun.env, ...options.env } : undefined,
     stdin: isStreamingInput ? "pipe" : "ignore",
     stdout: "pipe",
     stderr: "pipe",

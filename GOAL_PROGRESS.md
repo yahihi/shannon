@@ -141,6 +141,8 @@ Agent SDK parity still have documented gaps.
 - approximate model/token cost reconstruction for known Claude model families.
 - SDK facade with `query()`, async iterable stdout parsing, string prompts,
   async iterable user-message input, and option-to-flag mapping.
+- SDK `env` support for passing environment variables into the Shannon
+  subprocess and inherited Claude process.
 - SDK `AbortController` support for cancelling the Shannon subprocess.
 - Zod schemas for current Shannon SDK message rows, native rate-limit event,
   option, and query parameter validation.
