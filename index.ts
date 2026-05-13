@@ -159,6 +159,7 @@ export function parseArgs(argv: string[], cwd = process.cwd()): CliOptions {
     .option("--fallback-model <model>", "fallback model")
     .option("--file <specs...>", "file resources to download at startup")
     .option("--fork-session", "fork when resuming")
+    .option("--from-pr [value]", "resume a session linked to a PR")
     .option("--ide", "auto-connect to IDE")
     .option("--include-hook-events", "include hook lifecycle events")
     .option("--include-partial-messages", "include partial message chunks")
@@ -173,6 +174,8 @@ export function parseArgs(argv: string[], cwd = process.cwd()): CliOptions {
     .option("--permission-mode <mode>", "permission mode")
     .option("--plugin-dir <path>", "plugin directory", collect, [])
     .option("--plugin-url <url>", "plugin URL", collect, [])
+    .option("--remote-control [name]", "start an interactive session with Remote Control enabled")
+    .option("--remote-control-session-name-prefix <prefix>", "Remote Control session name prefix")
     .option("-r, --resume [value]", "resume a conversation")
     .option("--replay-user-messages", "re-emit stream-json input user messages")
     .option("--session-id <uuid>", "specific session UUID")
@@ -181,6 +184,8 @@ export function parseArgs(argv: string[], cwd = process.cwd()): CliOptions {
     .option("--strict-mcp-config", "strict MCP config")
     .option("--system-prompt <prompt>", "system prompt")
     .option("--tools <tools...>", "available tools")
+    .option("--tmux [mode]", "create a tmux session for the worktree")
+    .option("-w, --worktree [name]", "create a new git worktree for this session")
     .configureOutput({
       writeOut: () => undefined,
       writeErr: () => undefined,
@@ -267,6 +272,7 @@ export function buildClaudeArgs(parsed: Record<string, unknown>): string[] {
   addString(args, "--fallback-model", parsed.fallbackModel);
   addRepeated(args, "--file", parsed.file);
   addBoolean(args, "--fork-session", parsed.forkSession);
+  addOptionalString(args, "--from-pr", parsed.fromPr);
   addBoolean(args, "--ide", parsed.ide);
   addBoolean(args, "--include-hook-events", parsed.includeHookEvents);
   addBoolean(args, "--include-partial-messages", parsed.includePartialMessages);
@@ -281,6 +287,8 @@ export function buildClaudeArgs(parsed: Record<string, unknown>): string[] {
   addString(args, "--permission-mode", parsed.permissionMode);
   addRepeatedFlag(args, "--plugin-dir", parsed.pluginDir);
   addRepeatedFlag(args, "--plugin-url", parsed.pluginUrl);
+  addOptionalString(args, "--remote-control", parsed.remoteControl);
+  addString(args, "--remote-control-session-name-prefix", parsed.remoteControlSessionNamePrefix);
   addOptionalString(args, "--resume", parsed.resume);
   addString(args, "--session-id", parsed.sessionId);
   addString(args, "--setting-sources", parsed.settingSources);
@@ -288,6 +296,8 @@ export function buildClaudeArgs(parsed: Record<string, unknown>): string[] {
   addBoolean(args, "--strict-mcp-config", parsed.strictMcpConfig);
   addString(args, "--system-prompt", parsed.systemPrompt);
   addRepeated(args, "--tools", parsed.tools);
+  addOptionalString(args, "--tmux", parsed.tmux);
+  addOptionalString(args, "--worktree", parsed.worktree);
 
   return args;
 }
@@ -915,6 +925,7 @@ async function waitForPrompt(tmuxSession: string) {
 async function sendPrompt(tmuxSession: string, prompt: string) {
   await runCommand(["tmux", "set-buffer", "-b", `shannon-${tmuxSession}`, prompt]);
   await runCommand(["tmux", "paste-buffer", "-b", `shannon-${tmuxSession}`, "-t", tmuxSession]);
+  await sleep(POLL_MS);
   await runCommand(["tmux", "send-keys", "-t", tmuxSession, "C-m"]);
 }
 

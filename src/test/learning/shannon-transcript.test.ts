@@ -75,6 +75,35 @@ test("parses positional prompt and forwards common Claude flags", () => {
   });
 });
 
+test("forwards additional Claude interactive session flags", () => {
+  expect(
+    parseArgs([
+      "hello",
+      "--from-pr",
+      "123",
+      "--remote-control",
+      "handoff",
+      "--remote-control-session-name-prefix",
+      "shannon",
+      "--tmux",
+      "classic",
+      "--worktree",
+      "feature-a",
+    ]).claudeArgs,
+  ).toEqual([
+    "--from-pr",
+    "123",
+    "--remote-control",
+    "handoff",
+    "--remote-control-session-name-prefix",
+    "shannon",
+    "--tmux",
+    "classic",
+    "--worktree",
+    "feature-a",
+  ]);
+});
+
 test("accepts Claude print output formats", () => {
   expect(parseArgs(["-p", "hello", "--output-format=json"]).outputFormat).toBe("json");
   expect(parseArgs(["-p", "hello", "--output-format=text"]).outputFormat).toBe("text");

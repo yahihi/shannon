@@ -36,6 +36,7 @@ export type QueryOptions = {
   effort?: "low" | "medium" | "high" | "xhigh" | "max";
   fallbackModel?: string;
   forkSession?: boolean;
+  fromPr?: string | boolean;
   includeHookEvents?: boolean;
   includePartialMessages?: boolean;
   maxBudgetUsd?: number;
@@ -43,11 +44,15 @@ export type QueryOptions = {
   model?: string;
   name?: string;
   permissionMode?: "acceptEdits" | "auto" | "bypassPermissions" | "default" | "dontAsk" | "plan";
+  remoteControl?: string | boolean;
+  remoteControlSessionNamePrefix?: string;
   resume?: string | boolean;
   sessionId?: string;
   settings?: string | Record<string, unknown>;
   systemPrompt?: string;
   tools?: string[];
+  tmux?: string | boolean;
+  worktree?: string | boolean;
   dangerouslySkipPermissions?: boolean;
   allowDangerouslySkipPermissions?: boolean;
   abortController?: AbortController;
@@ -239,6 +244,7 @@ export const shannonQueryOptionsSchema = z.object({
   effort: z.enum(["low", "medium", "high", "xhigh", "max"]).optional(),
   fallbackModel: z.string().optional(),
   forkSession: z.boolean().optional(),
+  fromPr: z.union([z.string(), z.boolean()]).optional(),
   includeHookEvents: z.boolean().optional(),
   includePartialMessages: z.boolean().optional(),
   maxBudgetUsd: z.number().optional(),
@@ -246,11 +252,15 @@ export const shannonQueryOptionsSchema = z.object({
   model: z.string().optional(),
   name: z.string().optional(),
   permissionMode: z.enum(["acceptEdits", "auto", "bypassPermissions", "default", "dontAsk", "plan"]).optional(),
+  remoteControl: z.union([z.string(), z.boolean()]).optional(),
+  remoteControlSessionNamePrefix: z.string().optional(),
   resume: z.union([z.string(), z.boolean()]).optional(),
   sessionId: z.string().optional(),
   settings: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
   systemPrompt: z.string().optional(),
   tools: z.array(z.string()).optional(),
+  tmux: z.union([z.string(), z.boolean()]).optional(),
+  worktree: z.union([z.string(), z.boolean()]).optional(),
   dangerouslySkipPermissions: z.boolean().optional(),
   allowDangerouslySkipPermissions: z.boolean().optional(),
   abortController: z.instanceof(AbortController).optional(),
@@ -365,6 +375,7 @@ export function optionsToCliArgs(options: QueryOptions): string[] {
   addString(args, "--effort", options.effort);
   addString(args, "--fallback-model", options.fallbackModel);
   addBoolean(args, "--fork-session", options.forkSession);
+  addOptionalString(args, "--from-pr", options.fromPr);
   addBoolean(args, "--include-hook-events", options.includeHookEvents);
   addBoolean(args, "--include-partial-messages", options.includePartialMessages);
   addString(args, "--max-budget-usd", options.maxBudgetUsd);
@@ -372,11 +383,15 @@ export function optionsToCliArgs(options: QueryOptions): string[] {
   addString(args, "--model", options.model);
   addString(args, "--name", options.name);
   addString(args, "--permission-mode", options.permissionMode);
+  addOptionalString(args, "--remote-control", options.remoteControl);
+  addString(args, "--remote-control-session-name-prefix", options.remoteControlSessionNamePrefix);
   addOptionalString(args, "--resume", options.resume);
   addString(args, "--session-id", options.sessionId);
   addSettings(args, options.settings);
   addString(args, "--system-prompt", options.systemPrompt);
   addRepeated(args, "--tools", options.tools);
+  addOptionalString(args, "--tmux", options.tmux);
+  addOptionalString(args, "--worktree", options.worktree);
   addBoolean(args, "--dangerously-skip-permissions", options.dangerouslySkipPermissions);
 
   return args;

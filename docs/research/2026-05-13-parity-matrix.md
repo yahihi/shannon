@@ -46,6 +46,7 @@ Session/control flags accepted and forwarded to the underlying interactive
 - `--fallback-model`
 - `--file`
 - `--fork-session`
+- `--from-pr`
 - `--ide`
 - `--include-hook-events`
 - `--include-partial-messages`
@@ -59,6 +60,8 @@ Session/control flags accepted and forwarded to the underlying interactive
 - `--permission-mode`
 - `--plugin-dir`
 - `--plugin-url`
+- `--remote-control`
+- `--remote-control-session-name-prefix`
 - `--replay-user-messages`
 - `--resume`
 - `--session-id`
@@ -66,7 +69,9 @@ Session/control flags accepted and forwarded to the underlying interactive
 - `--settings`
 - `--strict-mcp-config`
 - `--system-prompt`
+- `--tmux`
 - `--tools`
+- `--worktree`
 
 ## Implemented Stream Rows
 

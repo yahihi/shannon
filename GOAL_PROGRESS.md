@@ -63,7 +63,7 @@ Agent SDK parity still have documented gaps.
 ## Verification Performed
 
 - `bun test`
-  - Passes: 29 tests.
+  - Passes: 30 tests.
   - Skips: 8 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
@@ -109,7 +109,8 @@ Agent SDK parity still have documented gaps.
 - `--output-format=json` now emits one JSON array of supported message rows,
   matching native `claude -p` output framing.
 - `--replay-user-messages`.
-- Commander-based parsing and broad Claude flag forwarding.
+- Commander-based parsing and broad Claude flag forwarding, including current
+  interactive session flags observed in `claude --help`.
 - tmux lifecycle management and cleanup in `finally`.
 - SIGINT/SIGTERM cleanup for the active tmux session.
 - prompt-bound transcript discovery to avoid attaching to another concurrent

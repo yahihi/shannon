@@ -65,8 +65,13 @@ test("maps SDK options onto Shannon CLI flags", () => {
       debug: "api",
       settings: { permissions: { defaultMode: "auto" } },
       continue: true,
+      fromPr: "123",
       includeHookEvents: true,
+      remoteControl: "handoff",
+      remoteControlSessionNamePrefix: "shannon",
       replayUserMessages: true,
+      tmux: "classic",
+      worktree: "feature-a",
     }),
   ).toEqual([
     "--add-dir",
@@ -80,13 +85,23 @@ test("maps SDK options onto Shannon CLI flags", () => {
     "--continue",
     "--debug",
     "api",
+    "--from-pr",
+    "123",
     "--include-hook-events",
     "--model",
     "haiku",
     "--permission-mode",
     "plan",
+    "--remote-control",
+    "handoff",
+    "--remote-control-session-name-prefix",
+    "shannon",
     "--settings",
     '{"permissions":{"defaultMode":"auto"}}',
+    "--tmux",
+    "classic",
+    "--worktree",
+    "feature-a",
   ]);
 });
 
@@ -127,11 +142,15 @@ test("exports zod schemas for the current SDK surface", () => {
       outputFormat: "stream-json",
       permissionMode: "plan",
       model: "haiku",
+      remoteControl: true,
+      tmux: "classic",
     }),
   ).toEqual({
     outputFormat: "stream-json",
     permissionMode: "plan",
     model: "haiku",
+    remoteControl: true,
+    tmux: "classic",
   });
 
   expect(
