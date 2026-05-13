@@ -1010,6 +1010,10 @@ async function capturePane(tmuxSession: string) {
 }
 
 async function findExecutable(name: string) {
+  if (name.includes("/")) {
+    return await Bun.file(name).exists() ? name : undefined;
+  }
+
   const result = await runCommand(["which", name], false);
   return result.exitCode === 0 ? result.stdout.trim() : undefined;
 }

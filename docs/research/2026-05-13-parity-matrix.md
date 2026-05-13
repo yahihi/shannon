@@ -57,6 +57,7 @@ Session/control flags accepted and forwarded to the underlying interactive
 - `--model`
 - `--name`
 - `--no-session-persistence`
+- `--path-to-claude-code-executable`
 - `--permission-mode`
 - `--plugin-dir`
 - `--plugin-url`

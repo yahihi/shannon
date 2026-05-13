@@ -43,6 +43,7 @@ export type QueryOptions = {
   mcpConfig?: string[];
   model?: string;
   name?: string;
+  pathToClaudeCodeExecutable?: string;
   permissionMode?: "acceptEdits" | "auto" | "bypassPermissions" | "default" | "dontAsk" | "plan";
   remoteControl?: string | boolean;
   remoteControlSessionNamePrefix?: string;
@@ -251,6 +252,7 @@ export const shannonQueryOptionsSchema = z.object({
   mcpConfig: z.array(z.string()).optional(),
   model: z.string().optional(),
   name: z.string().optional(),
+  pathToClaudeCodeExecutable: z.string().optional(),
   permissionMode: z.enum(["acceptEdits", "auto", "bypassPermissions", "default", "dontAsk", "plan"]).optional(),
   remoteControl: z.union([z.string(), z.boolean()]).optional(),
   remoteControlSessionNamePrefix: z.string().optional(),
@@ -382,6 +384,7 @@ export function optionsToCliArgs(options: QueryOptions): string[] {
   addRepeated(args, "--mcp-config", options.mcpConfig);
   addString(args, "--model", options.model);
   addString(args, "--name", options.name);
+  addString(args, "--path-to-claude-code-executable", options.pathToClaudeCodeExecutable);
   addString(args, "--permission-mode", options.permissionMode);
   addOptionalString(args, "--remote-control", options.remoteControl);
   addString(args, "--remote-control-session-name-prefix", options.remoteControlSessionNamePrefix);

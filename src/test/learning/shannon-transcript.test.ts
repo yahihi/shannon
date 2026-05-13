@@ -46,6 +46,7 @@ test("parses the target CLI invocation shape", () => {
     verbose: true,
     replayUserMessages: false,
     cwd: "/Users/dex/repos/dexhorthy/shannon",
+    pathToClaudeCodeExecutable: undefined,
     claudeArgs: [],
   });
 });
@@ -58,12 +59,15 @@ test("parses positional prompt and forwards common Claude flags", () => {
       "sonnet",
       "--permission-mode",
       "plan",
+      "--path-to-claude-code-executable",
+      "/tmp/claude",
       "--add-dir",
       "/tmp",
     ]),
   ).toMatchObject({
     prompt: "hello positional",
     outputFormat: "stream-json",
+    pathToClaudeCodeExecutable: "/tmp/claude",
     claudeArgs: [
       "--add-dir",
       "/tmp",
@@ -135,6 +139,13 @@ test("extracts prompt text from stream-json user messages and can replay them", 
 test("finds required local executables before launching Claude", async () => {
   await expect(validateRuntime()).resolves.toMatchObject({
     claude: expect.stringContaining("claude"),
+    tmux: expect.stringContaining("tmux"),
+  });
+});
+
+test("accepts a custom Claude executable path for runtime validation", async () => {
+  await expect(validateRuntime("/Users/dex/.local/bin/claude")).resolves.toMatchObject({
+    claude: "/Users/dex/.local/bin/claude",
     tmux: expect.stringContaining("tmux"),
   });
 });

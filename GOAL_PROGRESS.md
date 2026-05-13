@@ -63,7 +63,7 @@ Agent SDK parity still have documented gaps.
 ## Verification Performed
 
 - `bun test`
-  - Passes: 30 tests.
+  - Passes: 31 tests.
   - Skips: 8 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
@@ -111,6 +111,8 @@ Agent SDK parity still have documented gaps.
 - `--replay-user-messages`.
 - Commander-based parsing and broad Claude flag forwarding, including current
   interactive session flags observed in `claude --help`.
+- Custom Claude executable path support via `--path-to-claude-code-executable`
+  and SDK `pathToClaudeCodeExecutable`.
 - tmux lifecycle management and cleanup in `finally`.
 - SIGINT/SIGTERM cleanup for the active tmux session.
 - prompt-bound transcript discovery to avoid attaching to another concurrent

@@ -57,6 +57,7 @@ test("maps SDK options onto Shannon CLI flags", () => {
     optionsToCliArgs({
       additionalDirectories: ["/tmp/a", "/tmp/b"],
       model: "haiku",
+      pathToClaudeCodeExecutable: "/tmp/claude",
       permissionMode: "plan",
       allowedTools: ["Read", "Grep"],
       agents: {
@@ -90,6 +91,8 @@ test("maps SDK options onto Shannon CLI flags", () => {
     "--include-hook-events",
     "--model",
     "haiku",
+    "--path-to-claude-code-executable",
+    "/tmp/claude",
     "--permission-mode",
     "plan",
     "--remote-control",
@@ -142,6 +145,7 @@ test("exports zod schemas for the current SDK surface", () => {
       outputFormat: "stream-json",
       permissionMode: "plan",
       model: "haiku",
+      pathToClaudeCodeExecutable: "/tmp/claude",
       remoteControl: true,
       tmux: "classic",
     }),
@@ -149,6 +153,7 @@ test("exports zod schemas for the current SDK surface", () => {
     outputFormat: "stream-json",
     permissionMode: "plan",
     model: "haiku",
+    pathToClaudeCodeExecutable: "/tmp/claude",
     remoteControl: true,
     tmux: "classic",
   });
