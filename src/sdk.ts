@@ -35,12 +35,16 @@ export type QueryOptions = {
   continue?: boolean;
   debug?: boolean | string;
   debugFile?: string;
+  disableSlashCommands?: boolean;
   disallowedTools?: string[];
   effort?: "low" | "medium" | "high" | "xhigh" | "max";
   env?: Record<string, string | undefined>;
+  excludeDynamicSystemPromptSections?: boolean;
   fallbackModel?: string;
+  file?: string[];
   forkSession?: boolean;
   fromPr?: string | boolean;
+  ide?: boolean;
   includeHookEvents?: boolean;
   includePartialMessages?: boolean;
   jsonSchema?: string | Record<string, unknown>;
@@ -57,6 +61,7 @@ export type QueryOptions = {
   remoteControlSessionNamePrefix?: string;
   resume?: string | boolean;
   sessionId?: string;
+  sessionPersistence?: boolean;
   settingSources?: string;
   settings?: string | Record<string, unknown>;
   strictMcpConfig?: boolean;
@@ -254,12 +259,16 @@ export const shannonQueryOptionsSchema = z.object({
   continue: z.boolean().optional(),
   debug: z.union([z.boolean(), z.string()]).optional(),
   debugFile: z.string().optional(),
+  disableSlashCommands: z.boolean().optional(),
   disallowedTools: z.array(z.string()).optional(),
   effort: z.enum(["low", "medium", "high", "xhigh", "max"]).optional(),
   env: z.record(z.string(), z.string().optional()).optional(),
+  excludeDynamicSystemPromptSections: z.boolean().optional(),
   fallbackModel: z.string().optional(),
+  file: z.array(z.string()).optional(),
   forkSession: z.boolean().optional(),
   fromPr: z.union([z.string(), z.boolean()]).optional(),
+  ide: z.boolean().optional(),
   includeHookEvents: z.boolean().optional(),
   includePartialMessages: z.boolean().optional(),
   jsonSchema: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
@@ -276,6 +285,7 @@ export const shannonQueryOptionsSchema = z.object({
   remoteControlSessionNamePrefix: z.string().optional(),
   resume: z.union([z.string(), z.boolean()]).optional(),
   sessionId: z.string().optional(),
+  sessionPersistence: z.boolean().optional(),
   settingSources: z.string().optional(),
   settings: z.union([z.string(), z.record(z.string(), z.unknown())]).optional(),
   strictMcpConfig: z.boolean().optional(),
@@ -397,11 +407,15 @@ export function optionsToCliArgs(options: QueryOptions): string[] {
   addBoolean(args, "--continue", options.continue);
   addOptionalString(args, "--debug", options.debug);
   addString(args, "--debug-file", options.debugFile);
+  addBoolean(args, "--disable-slash-commands", options.disableSlashCommands);
   addRepeated(args, "--disallowed-tools", options.disallowedTools);
   addString(args, "--effort", options.effort);
+  addBoolean(args, "--exclude-dynamic-system-prompt-sections", options.excludeDynamicSystemPromptSections);
   addString(args, "--fallback-model", options.fallbackModel);
+  addRepeated(args, "--file", options.file);
   addBoolean(args, "--fork-session", options.forkSession);
   addOptionalString(args, "--from-pr", options.fromPr);
+  addBoolean(args, "--ide", options.ide);
   addBoolean(args, "--include-hook-events", options.includeHookEvents);
   addBoolean(args, "--include-partial-messages", options.includePartialMessages);
   addJsonOrString(args, "--json-schema", options.jsonSchema);
@@ -418,6 +432,7 @@ export function optionsToCliArgs(options: QueryOptions): string[] {
   addString(args, "--remote-control-session-name-prefix", options.remoteControlSessionNamePrefix);
   addOptionalString(args, "--resume", options.resume);
   addString(args, "--session-id", options.sessionId);
+  addNoSessionPersistence(args, options.sessionPersistence);
   addString(args, "--setting-sources", options.settingSources);
   addSettings(args, options.settings);
   addBoolean(args, "--strict-mcp-config", options.strictMcpConfig);
@@ -487,4 +502,8 @@ function addSettings(args: string[], value: unknown) {
 function addChrome(args: string[], value: unknown) {
   if (value === true) args.push("--chrome");
   else if (value === false) args.push("--no-chrome");
+}
+
+function addNoSessionPersistence(args: string[], value: unknown) {
+  if (value === false) args.push("--no-session-persistence");
 }

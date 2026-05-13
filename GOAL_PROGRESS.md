@@ -55,7 +55,7 @@ Agent SDK parity still have documented gaps.
 | Publish package | Current package metadata is `@dexh/shannon`; npm reports `@dexh/shannon@0.0.2`. Original spec named `@humanlayer/shannon`, so namespace parity depends on the chosen package target. | Partial |
 | Publish agent SDK facade | Current package metadata is `@dexh/shannon-agent-sdk`; npm reports `@dexh/shannon-agent-sdk@0.0.1`. Full Agent SDK parity is still incomplete. | Partial |
 | Push public GitHub repo | `git push origin main` succeeded on `git@github.com:dexhorthy/shannon.git`. Original spec named `humanlayer/shannon`, so repo namespace parity depends on the chosen target. | Partial |
-| SDK `query()` | `src/sdk.ts` exports async iterable `query()`, JSONL parser, and option mapping. | Partial |
+| SDK `query()` | `src/sdk.ts` exports async iterable `query()`, JSONL parser, and option mapping for all currently forwarded Shannon CLI flags. | Partial |
 | Full zod schemas | Zod schemas are exported for the current Shannon SDK messages/options/query params; full Claude Agent SDK schema parity is not complete. | Partial |
 | Every `claude -p` / Agent SDK feature | Broad flags are accepted/forwarded and tests exist, but exact stream fields, callbacks, MCP server objects, session stores, warm queries, and full schemas are incomplete. | Partial |
 | Extensive conformance tests | Unit/learning tests, native `claude -p` fixture shape tests, and env-gated live Shannon tests exist. More fixture cases are still needed. | Partial |
@@ -140,8 +140,8 @@ Agent SDK parity still have documented gaps.
 - synthesized init/result rows and Shannon metadata row.
 - approximate model/token cost reconstruction for known Claude model families.
 - SDK facade with `query()`, async iterable stdout parsing, string prompts,
-  async iterable user-message input, and broad option-to-flag mapping for
-  supported Shannon/Claude flags.
+  async iterable user-message input, and option-to-flag mapping for every
+  Shannon CLI flag currently forwarded to Claude.
 - SDK `env` support for passing environment variables into the Shannon
   subprocess and inherited Claude process.
 - SDK `AbortController` support for cancelling the Shannon subprocess.
