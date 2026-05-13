@@ -73,6 +73,8 @@ Agent SDK parity still have documented gaps.
   - Passes for `@humanlayer/shannon-agent-sdk`.
 - `bun run pack:check`
   - Passes package dry-runs for both packages.
+- `./bin/shannon.mjs -p "Reply with exactly: shannon bin wrapper" --model haiku --output-format=text`
+  - Passes and prints `shannon bin wrapper`.
 - CI:
   - `.github/workflows/ci.yml` runs install, tests, typecheck, and package
     dry-runs for both packages.
@@ -145,6 +147,8 @@ Agent SDK parity still have documented gaps.
 - MIT license file and package license metadata.
 - GitHub Actions CI workflow for non-live verification.
 - Release metadata and npm publish workflow for both package manifests.
+- Published package bin wrapper at `bin/shannon.mjs`, verified against the local
+  CLI path.
 - Live conformance tests for single-turn and finite multi-turn execution.
 - README usage for CLI and SDK.
 
