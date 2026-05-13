@@ -76,6 +76,8 @@ Session/control flags accepted and forwarded to the underlying interactive
 - `system/init`, synthesized from transcript metadata.
   - `skills` and `slash_commands` are reconstructed from durable
     `skill_listing` attachments when present.
+  - `mcp_servers` are reconstructed from durable `mcp_instructions_delta`
+    attachments when present.
 - `assistant`, translated from transcript assistant rows.
 - `result/success`, synthesized from the assistant row.
 - `shannon_session/metadata`, extra Shannon final row with transcript and cleanup data.
@@ -101,9 +103,9 @@ Session/control flags accepted and forwarded to the underlying interactive
 
 - Native `claude -p` emits exact `system/init` tools, MCP server, model, agents,
   skills, slash commands, plugins, memory paths, and API key source.
-  Interactive transcripts provide skill listings and later assistant model data,
-  but do not currently provide all fields in one durable row, so Shannon still
-  emits placeholders for some fields.
+  Interactive transcripts provide skill listings, MCP instruction deltas, and
+  later assistant model data, but do not currently provide all fields in one
+  durable row, so Shannon still emits placeholders for some fields.
 - Native `claude -p` emits `rate_limit_event`; Shannon does not yet reconstruct
   this from transcript data.
 - Native exact billed costs are not persisted in a directly equivalent

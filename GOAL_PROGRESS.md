@@ -63,7 +63,7 @@ Agent SDK parity still have documented gaps.
 ## Verification Performed
 
 - `bun test`
-  - Passes: 24 tests.
+  - Passes: 25 tests.
   - Skips: 5 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
@@ -117,6 +117,8 @@ Agent SDK parity still have documented gaps.
 - transcript row translation for assistant rows and hook success attachments.
 - `system/init.skills` and `system/init.slash_commands` reconstruction from
   durable interactive `skill_listing` attachments.
+- `system/init.mcp_servers` reconstruction from durable interactive
+  `mcp_instructions_delta` attachments when present.
 - synthesized `system/hook_started` rows before translated hook responses.
 - synthesized init/result rows and Shannon metadata row.
 - approximate model/token cost reconstruction for known Claude model families.
@@ -138,7 +140,9 @@ Agent SDK parity still have documented gaps.
 
 - `system/init` is approximate:
   - `tools` is `[]`.
-  - `mcp_servers` is `[]`.
+  - `mcp_servers` are reconstructed from durable MCP instruction deltas when
+    present; exact native status values such as `needs-auth` are not fully
+    reconstructed.
   - `model` uses a transcript assistant model only when one is already
     available during session discovery; otherwise it is `"unknown"`.
   - native fields such as agents, plugins, `apiKeySource`, memory paths, and

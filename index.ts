@@ -42,6 +42,8 @@ type TranscriptRow = JsonRecord & {
     stdout?: string;
     stderr?: string;
     exitCode?: number;
+    addedNames?: unknown;
+    removedNames?: unknown;
   };
 };
 
@@ -354,6 +356,7 @@ export function toSdkInit(meta: SessionMetadata, rows: TranscriptRow[]): JsonRec
   const versionedRow = rows.find((row) => typeof row.version === "string");
   const assistantRow = rows.find((row) => typeof row.message?.model === "string");
   const skillNames = skillNamesFromRows(rows);
+  const mcpServers = mcpServersFromRows(rows);
 
   return {
     type: "system",
@@ -361,7 +364,7 @@ export function toSdkInit(meta: SessionMetadata, rows: TranscriptRow[]): JsonRec
     cwd: meta.cwd,
     session_id: meta.sessionId,
     tools: [],
-    mcp_servers: [],
+    mcp_servers: mcpServers,
     model: assistantRow?.message?.model ?? "unknown",
     permissionMode: typeof userRow?.permissionMode === "string" ? userRow.permissionMode : "unknown",
     claude_code_version: typeof versionedRow?.version === "string" ? versionedRow.version : undefined,
@@ -369,6 +372,29 @@ export function toSdkInit(meta: SessionMetadata, rows: TranscriptRow[]): JsonRec
     skills: skillNames,
     uuid: randomUUID(),
   };
+}
+
+export function mcpServersFromRows(rows: TranscriptRow[]): Array<{ name: string; status: string }> {
+  const servers = new Map<string, { name: string; status: string }>();
+
+  for (const row of rows) {
+    if (row.attachment?.type !== "mcp_instructions_delta") continue;
+
+    for (const name of stringArrayFromUnknown(row.attachment.addedNames)) {
+      servers.set(name, { name, status: "connected" });
+    }
+
+    for (const name of stringArrayFromUnknown(row.attachment.removedNames)) {
+      servers.delete(name);
+    }
+  }
+
+  return [...servers.values()];
+}
+
+function stringArrayFromUnknown(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === "string" && item.length > 0);
 }
 
 export function skillNamesFromRows(rows: TranscriptRow[]): string[] {

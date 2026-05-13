@@ -12,6 +12,7 @@ import { expect, test } from "bun:test";
 import {
   claudeProjectFolder,
   estimateCostUSD,
+  mcpServersFromRows,
   parseArgs,
   promptFromUserMessage,
   projectKeyForCwd,
@@ -183,6 +184,32 @@ test("extracts skill names from interactive skill listings", () => {
   ]);
 });
 
+test("extracts MCP server names from interactive MCP instruction deltas", () => {
+  expect(
+    mcpServersFromRows([
+      {
+        type: "attachment",
+        attachment: {
+          type: "mcp_instructions_delta",
+          addedNames: ["context7", "morph-mcp"],
+          removedNames: [],
+        },
+      },
+      {
+        type: "attachment",
+        attachment: {
+          type: "mcp_instructions_delta",
+          addedNames: ["github"],
+          removedNames: ["morph-mcp"],
+        },
+      },
+    ]),
+  ).toEqual([
+    { name: "context7", status: "connected" },
+    { name: "github", status: "connected" },
+  ]);
+});
+
 test("translates an interactive assistant row into SDK-ish assistant and result rows", () => {
   const row = {
     type: "assistant",
@@ -314,6 +341,14 @@ test("synthesizes init from transcript metadata when available", () => {
             content: "- pair-agent\n- design-shotgun: Design shotgun\n",
           },
         },
+        {
+          type: "attachment",
+          attachment: {
+            type: "mcp_instructions_delta",
+            addedNames: ["context7"],
+            removedNames: [],
+          },
+        },
         { type: "assistant", message: { role: "assistant", model: "claude-test" } },
       ],
     ),
@@ -325,6 +360,7 @@ test("synthesizes init from transcript metadata when available", () => {
     model: "claude-test",
     permissionMode: "auto",
     claude_code_version: "2.1.140",
+    mcp_servers: [{ name: "context7", status: "connected" }],
     slash_commands: ["pair-agent", "design-shotgun"],
     skills: ["pair-agent", "design-shotgun"],
   });
