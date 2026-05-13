@@ -158,10 +158,16 @@ test("finds required local executables before launching Claude", async () => {
 });
 
 test("accepts a custom Claude executable path for runtime validation", async () => {
-  await expect(validateRuntime("/Users/dex/.local/bin/claude")).resolves.toMatchObject({
-    claude: "/Users/dex/.local/bin/claude",
-    tmux: expect.stringContaining("tmux"),
-  });
+  const customPath = `${process.env.TMPDIR ?? "/tmp"}/shannon-fake-claude-${process.pid}`;
+  await Bun.write(customPath, "#!/bin/sh\nexit 0\n");
+  try {
+    await expect(validateRuntime(customPath)).resolves.toMatchObject({
+      claude: customPath,
+      tmux: expect.stringContaining("tmux"),
+    });
+  } finally {
+    await Bun.file(customPath).unlink().catch(() => {});
+  }
 });
 
 test("maps termination signals to conventional shell exit codes", () => {

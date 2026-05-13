@@ -13,6 +13,7 @@ jobs:
         with:
           bun-version: latest
       - run: bun install --frozen-lockfile
+      - run: bun add -g @anthropic-ai/claude-code
       - run: bun test
       - run: bun run typecheck
       - run: bun pm pack --dry-run
