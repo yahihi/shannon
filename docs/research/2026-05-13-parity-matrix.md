@@ -125,7 +125,8 @@ Session/control flags accepted and forwarded to the underlying interactive
 ## Conformance Strategy
 
 - Unit-level conformance tests cover argument parsing, SDK option-to-flag
-  mapping, transcript row translation, JSONL parsing, and metadata shape.
+  mapping, transcript row translation, JSONL parsing, native rate-limit event
+  schema validation, and metadata shape.
 - Live smoke tests compare the real `shannon -p ... --output-format=stream-json
   --verbose` path, incremental multi-turn stdin path, JSON array output, and
   `--resume <session-id>` against the expected contract and verify tmux cleanup.

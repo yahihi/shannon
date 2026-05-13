@@ -80,6 +80,39 @@ export const shannonMessageSchema = z.object({
   uuid: z.string().optional(),
 }).catchall(z.unknown());
 
+export const shannonRateLimitInfoSchema = z.object({
+  status: z.enum(["allowed", "allowed_warning", "rejected"]),
+  resetsAt: z.number().optional(),
+  rateLimitType: z.enum(["five_hour", "seven_day", "seven_day_opus", "seven_day_sonnet", "overage"]).optional(),
+  utilization: z.number().optional(),
+  overageStatus: z.enum(["allowed", "allowed_warning", "rejected"]).optional(),
+  overageResetsAt: z.number().optional(),
+  overageDisabledReason: z.enum([
+    "overage_not_provisioned",
+    "org_level_disabled",
+    "org_level_disabled_until",
+    "out_of_credits",
+    "seat_tier_level_disabled",
+    "member_level_disabled",
+    "seat_tier_zero_credit_limit",
+    "group_zero_credit_limit",
+    "member_zero_credit_limit",
+    "org_service_level_disabled",
+    "no_limits_configured",
+    "fetch_error",
+    "unknown",
+  ]).optional(),
+  isUsingOverage: z.boolean().optional(),
+  surpassedThreshold: z.number().optional(),
+}).catchall(z.unknown());
+
+export const shannonRateLimitEventSchema = z.object({
+  type: z.literal("rate_limit_event"),
+  rate_limit_info: shannonRateLimitInfoSchema,
+  session_id: z.string(),
+  uuid: z.string(),
+}).catchall(z.unknown());
+
 export const shannonOutputFormatSchema = z.enum(["stream-json", "json", "text"]);
 
 export const shannonQueryOptionsSchema = z.object({

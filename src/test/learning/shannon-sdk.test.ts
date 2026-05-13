@@ -17,8 +17,11 @@ import {
   shannonMessageSchema,
   shannonQueryOptionsSchema,
   shannonQueryParamsSchema,
+  shannonRateLimitEventSchema,
   shannonUserMessageSchema,
 } from "../../sdk";
+
+const streamFixturePath = new URL("../fixtures/claude-p-haiku-stream-json.fixture.jsonl", import.meta.url);
 
 test("parses jsonl messages even when chunks split object boundaries", async () => {
   const stream = new ReadableStream<Uint8Array>({
@@ -133,5 +136,25 @@ test("exports zod schemas for the current SDK surface", () => {
   ).toEqual({
     prompt: "hello",
     options: { verbose: true },
+  });
+});
+
+test("exports a schema for native rate limit events", async () => {
+  const fixtureRows = (await Bun.file(streamFixturePath).text())
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
+  const rateLimitEvent = fixtureRows.find((row) => row.type === "rate_limit_event");
+
+  expect(shannonRateLimitEventSchema.parse(rateLimitEvent)).toMatchObject({
+    type: "rate_limit_event",
+    rate_limit_info: {
+      status: "allowed",
+      rateLimitType: "five_hour",
+      overageStatus: "rejected",
+      isUsingOverage: false,
+    },
+    session_id: "session-1",
+    uuid: "uuid-rate-limit",
   });
 });

@@ -63,7 +63,7 @@ Agent SDK parity still have documented gaps.
 ## Verification Performed
 
 - `bun test`
-  - Passes: 25 tests.
+  - Passes: 27 tests.
   - Skips: 5 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
@@ -125,8 +125,8 @@ Agent SDK parity still have documented gaps.
 - SDK facade with `query()`, async iterable stdout parsing, string prompts,
   async iterable user-message input, and option-to-flag mapping.
 - SDK `AbortController` support for cancelling the Shannon subprocess.
-- Zod schemas for current Shannon SDK message, option, and query parameter
-  validation.
+- Zod schemas for current Shannon SDK message, native rate-limit event, option,
+  and query parameter validation.
 - Native `claude -p` text, json, and stream-json fixture shape tests for Haiku.
 - `packages/shannon-agent-sdk` thin package facade for the implemented Shannon
   SDK surface.
@@ -152,7 +152,8 @@ Agent SDK parity still have documented gaps.
     available during session discovery; otherwise it is `"unknown"`.
   - native fields such as agents, plugins, `apiKeySource`, memory paths, and
     output style are not fully reconstructed.
-- `rate_limit_event` is not reconstructed.
+- `rate_limit_event` is schema-covered from native fixtures but is not
+  reconstructed from interactive transcripts.
 - Exact billing parity is not guaranteed:
   - `total_cost_usd` and `modelUsage.*.costUSD` are estimated from transcript
     token usage for known Claude model families.
