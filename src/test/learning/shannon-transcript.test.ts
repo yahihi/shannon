@@ -536,6 +536,26 @@ test("uses requested model in init before transcript assistant model is availabl
   });
 });
 
+test("uses permission-mode transcript rows in init when user row mode is unavailable", () => {
+  expect(
+    toSdkInit(
+      {
+        sessionId: "session-1",
+        projectFolder: "/home/test/.claude/projects/-repo",
+        transcriptPath: "/home/test/.claude/projects/-repo/session-1.jsonl",
+        tmuxSession: "shannon-test",
+        cwd: "/repo",
+        requestedPermissionMode: "plan",
+      },
+      [{ type: "permission-mode", permissionMode: "default" }],
+    ),
+  ).toMatchObject({
+    type: "system",
+    subtype: "init",
+    permissionMode: "default",
+  });
+});
+
 test("emits a final Shannon metadata row with session location and cleanup status", () => {
   expect(
     toShannonMetadata(

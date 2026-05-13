@@ -63,7 +63,7 @@ Agent SDK parity still have documented gaps.
 ## Verification Performed
 
 - `bun test`
-  - Passes: 35 tests.
+  - Passes: 36 tests.
   - Skips: 11 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
@@ -143,8 +143,8 @@ Agent SDK parity still have documented gaps.
 - `system/init.model` uses the transcript assistant model when available, or
   the requested `--model` value before an assistant row has been observed.
 - `system/init.permissionMode` uses the transcript user row value when
-  available, or the requested `--permission-mode` value before that row exposes
-  it.
+  available, durable `permission-mode` transcript rows, or the requested
+  `--permission-mode` value before those rows expose it.
 - synthesized `system/hook_started` rows before translated hook responses.
 - synthesized `stream_event` partial assistant rows from the final assistant
   text when `--include-partial-messages` is requested; the flag is handled by
@@ -192,9 +192,9 @@ Agent SDK parity still have documented gaps.
   - `model` uses a transcript assistant model when available and falls back to
     the requested `--model` value, but can still be `"unknown"` if neither
     source is present.
-  - `permissionMode` uses the transcript user row value or requested
-    `--permission-mode`, but can still be `"unknown"` if neither source is
-    present.
+  - `permissionMode` uses the transcript user row value, durable
+    `permission-mode` rows, or requested `--permission-mode`, but can still be
+    `"unknown"` if none of those sources is present.
   - `plugins` are reconstructed from skill listing source markers when present,
     but path/source metadata is still less detailed than native plugin rows.
   - `apiKeySource`, `output_style`, and `agents` are emitted with native-shaped

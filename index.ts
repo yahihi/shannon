@@ -23,6 +23,7 @@ type JsonRecord = Record<string, unknown>;
 type TranscriptRow = JsonRecord & {
   type?: string;
   subtype?: string;
+  permissionMode?: string;
   sessionId?: string;
   session_id?: string;
   cwd?: string;
@@ -434,6 +435,7 @@ export function toSdkHookStarted(row: TranscriptRow): JsonRecord | undefined {
 
 export function toSdkInit(meta: SessionMetadata, rows: TranscriptRow[]): JsonRecord {
   const userRow = rows.find((row) => row.type === "user");
+  const permissionModeRow = rows.find((row) => row.type === "permission-mode");
   const versionedRow = rows.find((row) => typeof row.version === "string");
   const assistantRow = rows.find((row) => typeof row.message?.model === "string");
   const skillNames = skillNamesFromRows(rows);
@@ -451,6 +453,8 @@ export function toSdkInit(meta: SessionMetadata, rows: TranscriptRow[]): JsonRec
     model: assistantRow?.message?.model ?? meta.requestedModel ?? "unknown",
     permissionMode: typeof userRow?.permissionMode === "string"
       ? userRow.permissionMode
+      : typeof permissionModeRow?.permissionMode === "string"
+        ? permissionModeRow.permissionMode
       : meta.requestedPermissionMode ?? "unknown",
     apiKeySource: "none",
     claude_code_version: typeof versionedRow?.version === "string" ? versionedRow.version : undefined,
