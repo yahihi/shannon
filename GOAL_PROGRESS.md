@@ -54,7 +54,7 @@ Agent SDK parity still have documented gaps.
 | Use Commander | `parseArgs()` uses `commander`. | Implemented |
 | Publish package | Current package metadata is `@dexh/shannon`; npm reports `@dexh/shannon@0.0.2`. Original spec named `@humanlayer/shannon`, so namespace parity depends on the chosen package target. | Partial |
 | Publish agent SDK facade | Current package metadata is `@dexh/shannon-agent-sdk`; npm reports `@dexh/shannon-agent-sdk@0.0.1`. Full Agent SDK parity is still incomplete. | Partial |
-| Push public GitHub repo | `git push origin main` succeeded; `origin/main` resolves to `4e7dbb37e476b5e19f01ebfafc15cdbab3650b7b` on `git@github.com:dexhorthy/shannon.git`. Original spec named `humanlayer/shannon`, so repo namespace parity depends on the chosen target. | Partial |
+| Push public GitHub repo | `git push origin main` succeeded on `git@github.com:dexhorthy/shannon.git`. Original spec named `humanlayer/shannon`, so repo namespace parity depends on the chosen target. | Partial |
 | SDK `query()` | `src/sdk.ts` exports async iterable `query()`, JSONL parser, and option mapping. | Partial |
 | Full zod schemas | Zod schemas are exported for the current Shannon SDK messages/options/query params; full Claude Agent SDK schema parity is not complete. | Partial |
 | Every `claude -p` / Agent SDK feature | Broad flags are accepted/forwarded and tests exist, but exact stream fields, callbacks, MCP server objects, session stores, warm queries, and full schemas are incomplete. | Partial |
@@ -81,8 +81,8 @@ Agent SDK parity still have documented gaps.
   - Reports `0.0.2`.
 - `bun pm view @dexh/shannon-agent-sdk version`
   - Reports `0.0.1`.
-- `git ls-remote --heads origin main`
-  - Reports `4e7dbb37e476b5e19f01ebfafc15cdbab3650b7b`.
+- `git push origin main`
+  - Succeeds for the current local `main` branch.
 - CI:
   - `.github/workflows/ci.yml` runs install, tests, typecheck, and package
     dry-runs for both packages.
