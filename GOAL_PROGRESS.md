@@ -73,6 +73,11 @@ Agent SDK parity still have documented gaps.
   - Passes for `@dexh/shannon-agent-sdk`.
 - `bun run pack:check`
   - Passes package dry-runs for both packages.
+- `bun test src/test/learning/shannon-sdk.test.ts`
+  - Passes: 9 tests.
+  - Covers SDK query parsing/options/cancellation, local transcript session
+    reads/lists/forks, local rename/tag/delete mutation helpers, and exported
+    schemas.
 - `./bin/shannon.mjs -p "Reply with exactly: shannon bin wrapper" --model haiku --output-format=text`
   - Passes and prints `shannon bin wrapper`.
 - `cd examples/hello-world && bun run start`
@@ -166,6 +171,9 @@ Agent SDK parity still have documented gaps.
   `listSessions()` read Claude transcript files for local session inspection.
 - SDK local `forkSession()` copies a transcript to a new session id and rewrites
   persisted session id fields.
+- SDK local `renameSession()`, `tagSession()`, and `deleteSession()` mutate
+  local Claude transcript state using native-shaped `custom-title` and `tag`
+  rows, and remove the transcript plus same-id sidecar directory for deletes.
 - Zod schemas for current Shannon SDK message rows, native rate-limit event,
   selected additional Agent SDK stream/control variants, option, and query
   parameter validation.
@@ -236,8 +244,8 @@ Agent SDK parity still have documented gaps.
   - warm query / prewarmed process behavior
   - custom process spawning
 - SDK session helpers are local transcript-backed only; they do not implement
-  Agent SDK custom `SessionStore` plumbing, file-history snapshots, or subagent
-  fork semantics.
+  Agent SDK custom `SessionStore` plumbing, file-history snapshots, subagent
+  list/message helpers, or subagent fork semantics.
 - full interruption API parity beyond SDK `interrupt()`/`close()` subprocess
   cancellation
 - Full resume/fork semantics still need broader edge-case testing:

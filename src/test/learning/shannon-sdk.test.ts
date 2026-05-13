@@ -14,6 +14,7 @@ import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
+  deleteSession,
   forkSession,
   getSessionInfo,
   getSessionMessages,
@@ -21,6 +22,7 @@ import {
   optionsToCliArgs,
   parseJsonlStream,
   query,
+  renameSession,
   shannonAssistantMessageSchema,
   shannonControlRequestSchema,
   shannonControlResponseSchema,
@@ -37,6 +39,7 @@ import {
   shannonStreamMessageSchema,
   shannonSystemInitSchema,
   shannonUserMessageSchema,
+  tagSession,
 } from "../../sdk";
 
 const streamFixturePath = new URL("../fixtures/claude-p-haiku-stream-json.fixture.jsonl", import.meta.url);
@@ -292,6 +295,21 @@ test("reads local Claude session transcripts through SDK helpers", async () => {
       { sessionId: "session-fork" },
       { sessionId: "session-fork" },
     ]);
+
+    await renameSession("session-fork", "Fork title", { dir, home });
+    await tagSession("session-fork", "work", { dir, home });
+    await tagSession("session-fork", null, { dir, home });
+    await expect(getSessionMessages("session-fork", { dir, home })).resolves.toMatchObject([
+      { sessionId: "session-fork" },
+      { sessionId: "session-fork" },
+      { type: "custom-title", customTitle: "Fork title", sessionId: "session-fork" },
+      { type: "tag", tag: "work", sessionId: "session-fork" },
+      { type: "tag", tag: "", sessionId: "session-fork" },
+    ]);
+
+    await deleteSession("session-fork", { dir, home });
+    await expect(getSessionMessages("session-fork", { dir, home })).resolves.toEqual([]);
+    await expect(getSessionInfo("session-fork", { dir, home })).resolves.toBeUndefined();
   } finally {
     await rm(home, { recursive: true, force: true });
   }

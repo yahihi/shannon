@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { rm } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
 import { z } from "zod";
 
@@ -99,6 +100,8 @@ export type ListSessionsOptions = SessionLookupOptions & {
 export type ForkSessionOptions = SessionLookupOptions & {
   sessionId?: string;
 };
+
+export type SessionMutationOptions = SessionLookupOptions;
 
 export type ForkSessionResult = {
   sessionId: string;
@@ -473,6 +476,57 @@ export async function forkSession(
   return { sessionId: forkSessionId };
 }
 
+export async function renameSession(
+  sessionId: string,
+  title: string,
+  options: SessionMutationOptions = {},
+): Promise<void> {
+  if (!title.trim()) throw new Error("title must be non-empty");
+  const transcriptPath = await transcriptPathForSession(sessionId, options);
+  if (!transcriptPath) throw new Error(`Session ${sessionId} not found`);
+
+  await appendTranscriptRow(transcriptPath, {
+    type: "custom-title",
+    customTitle: title.trim(),
+    sessionId,
+    uuid: randomUUID(),
+    timestamp: new Date().toISOString(),
+  });
+}
+
+export async function tagSession(
+  sessionId: string,
+  tag: string | null,
+  options: SessionMutationOptions = {},
+): Promise<void> {
+  const normalizedTag = tag === null ? "" : tag.trim();
+  if (tag !== null && !normalizedTag) throw new Error("tag must be non-empty (use null to clear)");
+  const transcriptPath = await transcriptPathForSession(sessionId, options);
+  if (!transcriptPath) throw new Error(`Session ${sessionId} not found`);
+
+  await appendTranscriptRow(transcriptPath, {
+    type: "tag",
+    tag: normalizedTag,
+    sessionId,
+    uuid: randomUUID(),
+    timestamp: new Date().toISOString(),
+  });
+}
+
+export async function deleteSession(
+  sessionId: string,
+  options: SessionMutationOptions = {},
+): Promise<void> {
+  const transcriptPath = await transcriptPathForSession(sessionId, options);
+  if (!transcriptPath) return;
+
+  await rm(transcriptPath, { force: true });
+  await rm(join(transcriptPath.slice(0, -basename(transcriptPath).length), sessionId), {
+    force: true,
+    recursive: true,
+  });
+}
+
 export async function* parseJsonlStream(stream: ReadableStream<Uint8Array>): AsyncIterable<ShannonMessage> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
@@ -581,6 +635,13 @@ async function readJsonlFile(path: string): Promise<ShannonMessage[]> {
     .split("\n")
     .filter((line) => line.trim().length > 0)
     .map((line) => JSON.parse(line) as ShannonMessage);
+}
+
+async function appendTranscriptRow(path: string, row: ShannonMessage): Promise<void> {
+  const file = Bun.file(path);
+  const text = await file.text();
+  const prefix = text.length > 0 && !text.endsWith("\n") ? `${text}\n` : text;
+  await Bun.write(path, `${prefix}${JSON.stringify(row)}\n`);
 }
 
 async function* runQuery(
