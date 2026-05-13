@@ -97,6 +97,13 @@ export type ListSessionsOptions = SessionLookupOptions & {
   offset?: number;
 };
 
+export type ListSubagentsOptions = SessionLookupOptions;
+
+export type GetSubagentMessagesOptions = SessionLookupOptions & {
+  limit?: number;
+  offset?: number;
+};
+
 export type ForkSessionOptions = SessionLookupOptions & {
   sessionId?: string;
 };
@@ -457,6 +464,41 @@ export async function listSessions(options: ListSessionsOptions = {}): Promise<S
   return infos.slice(offset, limit === undefined ? undefined : offset + limit);
 }
 
+export async function listSubagents(
+  sessionId: string,
+  options: ListSubagentsOptions = {},
+): Promise<string[]> {
+  const subagentsFolder = await subagentsFolderForSession(sessionId, options);
+  if (!subagentsFolder) return [];
+
+  const glob = new Bun.Glob("agent-*.jsonl");
+  const agentIds: string[] = [];
+  try {
+    for await (const file of glob.scan(subagentsFolder)) {
+      agentIds.push(file.replace(/^agent-/, "").replace(/\.jsonl$/, ""));
+    }
+  } catch {
+    return [];
+  }
+
+  return agentIds.sort();
+}
+
+export async function getSubagentMessages(
+  sessionId: string,
+  agentId: string,
+  options: GetSubagentMessagesOptions = {},
+): Promise<ShannonMessage[]> {
+  const subagentsFolder = await subagentsFolderForSession(sessionId, options);
+  if (!subagentsFolder) return [];
+
+  const rows = await readJsonlFile(join(subagentsFolder, `agent-${agentId}.jsonl`));
+  const messages = rows.filter((row) => row.type === "user" || row.type === "assistant");
+  const offset = Math.max(0, options.offset ?? 0);
+  const limit = options.limit === undefined ? undefined : Math.max(0, options.limit);
+  return messages.slice(offset, limit === undefined ? undefined : offset + limit);
+}
+
 export async function forkSession(
   sessionId: string,
   options: ForkSessionOptions = {},
@@ -606,6 +648,15 @@ async function transcriptPathForSession(
   }
 
   return (await listTranscriptPaths(options)).find((path) => basename(path) === `${sessionId}.jsonl`);
+}
+
+async function subagentsFolderForSession(
+  sessionId: string,
+  options: SessionLookupOptions,
+): Promise<string | undefined> {
+  const transcriptPath = await transcriptPathForSession(sessionId, options);
+  if (!transcriptPath) return undefined;
+  return join(transcriptPath.slice(0, -basename(transcriptPath).length), sessionId, "subagents");
 }
 
 async function sessionInfoFromTranscript(transcriptPath: string): Promise<ShannonSessionInfo | undefined> {

@@ -18,7 +18,9 @@ import {
   forkSession,
   getSessionInfo,
   getSessionMessages,
+  getSubagentMessages,
   listSessions,
+  listSubagents,
   optionsToCliArgs,
   parseJsonlStream,
   query,
@@ -274,6 +276,29 @@ test("reads local Claude session transcripts through SDK helpers", async () => {
         message: { role: "user", content: "older" },
       })}\n`,
     );
+    await mkdir(join(projectFolder, sessionId, "subagents"), { recursive: true });
+    await Bun.write(
+      join(projectFolder, sessionId, "subagents", "agent-worker-1.jsonl"),
+      [
+        JSON.stringify({
+          type: "system",
+          timestamp: "2026-05-13T20:00:00.500Z",
+          sessionId,
+        }),
+        JSON.stringify({
+          type: "user",
+          timestamp: "2026-05-13T20:00:01.000Z",
+          sessionId,
+          message: { role: "user", content: "subtask" },
+        }),
+        JSON.stringify({
+          type: "assistant",
+          timestamp: "2026-05-13T20:00:02.000Z",
+          sessionId,
+          message: { role: "assistant", content: [{ type: "text", text: "done" }] },
+        }),
+      ].join("\n"),
+    );
 
     await expect(getSessionMessages(sessionId, { dir, home })).resolves.toHaveLength(2);
     await expect(getSessionInfo(sessionId, { dir, home })).resolves.toMatchObject({
@@ -286,6 +311,10 @@ test("reads local Claude session transcripts through SDK helpers", async () => {
     });
     await expect(listSessions({ dir, home, limit: 1 })).resolves.toMatchObject([
       { sessionId },
+    ]);
+    await expect(listSubagents(sessionId, { dir, home })).resolves.toEqual(["worker-1"]);
+    await expect(getSubagentMessages(sessionId, "worker-1", { dir, home, limit: 1 })).resolves.toMatchObject([
+      { type: "user", sessionId },
     ]);
 
     await expect(forkSession(sessionId, { dir, home, sessionId: "session-fork" })).resolves.toEqual({
