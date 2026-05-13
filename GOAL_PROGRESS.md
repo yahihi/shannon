@@ -63,7 +63,7 @@ Agent SDK parity still have documented gaps.
 ## Verification Performed
 
 - `bun test`
-  - Passes: 28 tests.
+  - Passes: 29 tests.
   - Skips: 8 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
@@ -129,8 +129,8 @@ Agent SDK parity still have documented gaps.
 - SDK facade with `query()`, async iterable stdout parsing, string prompts,
   async iterable user-message input, and option-to-flag mapping.
 - SDK `AbortController` support for cancelling the Shannon subprocess.
-- Zod schemas for current Shannon SDK message, native rate-limit event, option,
-  and query parameter validation.
+- Zod schemas for current Shannon SDK message rows, native rate-limit event,
+  option, and query parameter validation.
 - Native `claude -p` text, json, and stream-json fixture shape tests for Haiku.
 - `packages/shannon-agent-sdk` thin package facade for the implemented Shannon
   SDK surface.
@@ -191,8 +191,8 @@ Agent SDK parity still have documented gaps.
   - `--session-id` is live-tested for a new caller-provided session id.
   - `--fork-session` is live-tested when resuming into a caller-provided fork
     session id.
-- Zod schemas cover Shannon's current SDK surface, but not the full Claude
-  Agent SDK schema set yet.
+- Zod schemas cover Shannon's current emitted message rows and SDK surface, but
+  not the full Claude Agent SDK schema set yet.
 - `@humanlayer/shannon-agent-sdk` exists as a thin facade, but it is not
   published and does not implement missing Agent SDK runtime features.
 - No actual npm publish evidence or confirmed GitHub push from this checkout.

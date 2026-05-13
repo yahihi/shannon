@@ -14,10 +14,16 @@ import {
   optionsToCliArgs,
   parseJsonlStream,
   query,
+  shannonAssistantMessageSchema,
+  shannonHookResponseSchema,
+  shannonHookStartedSchema,
   shannonMessageSchema,
   shannonQueryOptionsSchema,
   shannonQueryParamsSchema,
   shannonRateLimitEventSchema,
+  shannonResultMessageSchema,
+  shannonStreamMessageSchema,
+  shannonSystemInitSchema,
   shannonUserMessageSchema,
 } from "../../sdk";
 
@@ -157,4 +163,42 @@ test("exports a schema for native rate limit events", async () => {
     session_id: "session-1",
     uuid: "uuid-rate-limit",
   });
+});
+
+test("exports structured schemas for emitted stream rows", async () => {
+  const fixtureRows = (await Bun.file(streamFixturePath).text())
+    .trim()
+    .split("\n")
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
+
+  expect(shannonHookStartedSchema.parse(fixtureRows[0])).toMatchObject({
+    type: "system",
+    subtype: "hook_started",
+  });
+  expect(shannonHookResponseSchema.parse(fixtureRows[1])).toMatchObject({
+    type: "system",
+    subtype: "hook_response",
+  });
+  expect(shannonSystemInitSchema.parse(fixtureRows[2])).toMatchObject({
+    type: "system",
+    subtype: "init",
+    session_id: "session-1",
+  });
+
+  const assistant = fixtureRows.find((row) => row.type === "assistant");
+  expect(shannonAssistantMessageSchema.parse(assistant)).toMatchObject({
+    type: "assistant",
+    session_id: "session-1",
+  });
+
+  const result = fixtureRows.find((row) => row.type === "result");
+  expect(shannonResultMessageSchema.parse(result)).toMatchObject({
+    type: "result",
+    subtype: "success",
+    session_id: "session-1",
+  });
+
+  for (const row of fixtureRows) {
+    expect(shannonStreamMessageSchema.parse(row)).toMatchObject({ type: row.type });
+  }
 });

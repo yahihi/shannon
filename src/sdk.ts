@@ -80,6 +80,100 @@ export const shannonMessageSchema = z.object({
   uuid: z.string().optional(),
 }).catchall(z.unknown());
 
+export const shannonSystemInitSchema = z.object({
+  type: z.literal("system"),
+  subtype: z.literal("init"),
+  cwd: z.string(),
+  session_id: z.string(),
+  tools: z.array(z.string()),
+  mcp_servers: z.array(z.object({
+    name: z.string(),
+    status: z.string(),
+  }).catchall(z.unknown())),
+  model: z.string(),
+  permissionMode: z.string(),
+  apiKeySource: z.string().optional(),
+  claude_code_version: z.string().optional(),
+  output_style: z.string().optional(),
+  agents: z.array(z.string()).optional(),
+  slash_commands: z.array(z.string()),
+  skills: z.array(z.string()),
+  plugins: z.array(z.object({
+    name: z.string().optional(),
+    path: z.string().optional(),
+    source: z.string().optional(),
+  }).catchall(z.unknown())).optional(),
+  uuid: z.string(),
+}).catchall(z.unknown());
+
+export const shannonHookStartedSchema = z.object({
+  type: z.literal("system"),
+  subtype: z.literal("hook_started"),
+  hook_id: z.string(),
+  hook_name: z.string(),
+  hook_event: z.string(),
+  session_id: z.string().optional(),
+  uuid: z.string(),
+}).catchall(z.unknown());
+
+export const shannonHookResponseSchema = z.object({
+  type: z.literal("system"),
+  subtype: z.literal("hook_response"),
+  hook_id: z.string(),
+  hook_name: z.string(),
+  hook_event: z.string(),
+  output: z.string(),
+  stdout: z.string(),
+  stderr: z.string(),
+  exit_code: z.number().optional(),
+  outcome: z.string(),
+  session_id: z.string().optional(),
+  uuid: z.string(),
+}).catchall(z.unknown());
+
+export const shannonAssistantMessageSchema = z.object({
+  type: z.literal("assistant"),
+  message: z.object({
+    role: z.literal("assistant"),
+    model: z.string().optional(),
+    content: z.array(z.object({ type: z.string() }).catchall(z.unknown())),
+    usage: z.record(z.string(), z.unknown()).optional(),
+  }).catchall(z.unknown()),
+  parent_tool_use_id: z.string().nullable().optional(),
+  session_id: z.string(),
+  uuid: z.string(),
+}).catchall(z.unknown());
+
+export const shannonResultMessageSchema = z.object({
+  type: z.literal("result"),
+  subtype: z.string(),
+  is_error: z.boolean(),
+  duration_ms: z.number(),
+  duration_api_ms: z.number(),
+  num_turns: z.number(),
+  result: z.string(),
+  stop_reason: z.string().nullable().optional(),
+  session_id: z.string(),
+  total_cost_usd: z.number(),
+  usage: z.record(z.string(), z.unknown()),
+  modelUsage: z.record(z.string(), z.unknown()),
+  permission_denials: z.array(z.unknown()),
+  terminal_reason: z.string(),
+  uuid: z.string(),
+}).catchall(z.unknown());
+
+export const shannonSessionMetadataSchema = z.object({
+  type: z.literal("shannon_session"),
+  subtype: z.literal("metadata"),
+  session_id: z.string(),
+  session_folder: z.string(),
+  transcript_path: z.string(),
+  tmux_session: z.string(),
+  cwd: z.string(),
+  cleanup: z.record(z.string(), z.unknown()),
+  uuid: z.string(),
+}).catchall(z.unknown());
+
 export const shannonRateLimitInfoSchema = z.object({
   status: z.enum(["allowed", "allowed_warning", "rejected"]),
   resetsAt: z.number().optional(),
@@ -112,6 +206,17 @@ export const shannonRateLimitEventSchema = z.object({
   session_id: z.string(),
   uuid: z.string(),
 }).catchall(z.unknown());
+
+export const shannonStreamMessageSchema = z.union([
+  shannonUserMessageSchema,
+  shannonSystemInitSchema,
+  shannonHookStartedSchema,
+  shannonHookResponseSchema,
+  shannonAssistantMessageSchema,
+  shannonResultMessageSchema,
+  shannonSessionMetadataSchema,
+  shannonRateLimitEventSchema,
+]);
 
 export const shannonOutputFormatSchema = z.enum(["stream-json", "json", "text"]);
 
