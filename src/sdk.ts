@@ -79,6 +79,11 @@ export type QueryParams = {
   options?: QueryOptions;
 };
 
+export type ShannonQuery = AsyncIterable<ShannonMessage> & {
+  interrupt(): Promise<void>;
+  close(): void;
+};
+
 export const shannonTextBlockSchema = z.object({
   type: z.literal("text"),
   text: z.string(),
@@ -309,8 +314,21 @@ export const shannonQueryParamsSchema = z.object({
   options: shannonQueryOptionsSchema.optional(),
 }).strict();
 
-export function query({ prompt, options = {} }: QueryParams): AsyncIterable<ShannonMessage> {
-  return runQuery(prompt, options);
+export function query({ prompt, options = {} }: QueryParams): ShannonQuery {
+  const abortController = options.abortController ?? new AbortController();
+  const iterable = runQuery(prompt, { ...options, abortController });
+
+  return {
+    [Symbol.asyncIterator]() {
+      return iterable[Symbol.asyncIterator]();
+    },
+    async interrupt() {
+      abortController.abort();
+    },
+    close() {
+      abortController.abort();
+    },
+  };
 }
 
 export async function* parseJsonlStream(stream: ReadableStream<Uint8Array>): AsyncIterable<ShannonMessage> {

@@ -63,7 +63,7 @@ Agent SDK parity still have documented gaps.
 ## Verification Performed
 
 - `bun test`
-  - Passes: 31 tests.
+  - Passes: 32 tests.
   - Skips: 8 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
@@ -145,6 +145,8 @@ Agent SDK parity still have documented gaps.
 - SDK `env` support for passing environment variables into the Shannon
   subprocess and inherited Claude process.
 - SDK `AbortController` support for cancelling the Shannon subprocess.
+- SDK `query()` returns an Agent SDK-like async iterable object with
+  `interrupt()` and `close()` methods wired to subprocess cancellation.
 - Zod schemas for current Shannon SDK message rows, native rate-limit event,
   option, and query parameter validation.
 - Native `claude -p` text, json, and stream-json fixture shape tests for Haiku.
@@ -204,7 +206,8 @@ Agent SDK parity still have documented gaps.
   - custom session stores
   - warm query / prewarmed process behavior
   - custom process spawning
-- full interruption API parity beyond subprocess cancellation
+- full interruption API parity beyond SDK `interrupt()`/`close()` subprocess
+  cancellation
 - Full resume/fork semantics need more live testing:
   - `--resume <session-id>` is live-tested.
   - `--continue` is live-tested.

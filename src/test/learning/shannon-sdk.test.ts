@@ -200,6 +200,22 @@ test("honors an already-aborted SDK query before spawning Shannon", async () => 
   await expect(iterator.next()).rejects.toThrow("Shannon query aborted before start");
 });
 
+test("returns a controllable SDK query object", async () => {
+  const sdkQuery = query({
+    prompt: "hello",
+    options: { command: "shannon-does-not-run" },
+  });
+
+  expect(typeof sdkQuery[Symbol.asyncIterator]).toBe("function");
+  expect(typeof sdkQuery.interrupt).toBe("function");
+  expect(typeof sdkQuery.close).toBe("function");
+
+  await sdkQuery.interrupt();
+  await expect(sdkQuery[Symbol.asyncIterator]().next()).rejects.toThrow(
+    "Shannon query aborted before start",
+  );
+});
+
 test("exports zod schemas for the current SDK surface", () => {
   expect(
     shannonUserMessageSchema.parse({
