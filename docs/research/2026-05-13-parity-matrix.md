@@ -105,9 +105,10 @@ Session/control flags accepted and forwarded to the underlying interactive
   skills, slash commands, plugins, memory paths, and API key source.
   Interactive transcripts provide skill listings, MCP instruction deltas, and
   later assistant model data. Shannon reconstructs observed built-in tool names
-  and known MCP tool names for `context7` and `morph-mcp`, but interactive
-  transcripts do not currently provide all fields in one durable row, so some
-  init fields remain approximate.
+  and known MCP tool names for `context7` and `morph-mcp`, and emits
+  native-shaped defaults for `apiKeySource`, `output_style`, `agents`, and
+  `plugins`. Interactive transcripts do not currently provide all fields in one
+  durable row, so some init fields remain approximate.
 - Native `claude -p` emits `rate_limit_event`; Shannon does not yet reconstruct
   this from transcript data.
 - Native exact billed costs are not persisted in a directly equivalent

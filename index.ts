@@ -397,9 +397,13 @@ export function toSdkInit(meta: SessionMetadata, rows: TranscriptRow[]): JsonRec
     mcp_servers: mcpServers,
     model: assistantRow?.message?.model ?? "unknown",
     permissionMode: typeof userRow?.permissionMode === "string" ? userRow.permissionMode : "unknown",
+    apiKeySource: "none",
     claude_code_version: typeof versionedRow?.version === "string" ? versionedRow.version : undefined,
+    output_style: "default",
+    agents: [],
     slash_commands: skillNames,
     skills: skillNames,
+    plugins: [],
     uuid: randomUUID(),
   };
 }

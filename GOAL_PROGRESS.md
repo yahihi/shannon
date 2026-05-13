@@ -133,6 +133,8 @@ Agent SDK parity still have documented gaps.
 - `system/init.tools` reconstruction from observed Claude Code built-in tool
   names plus known MCP tools for reconstructed `context7` and `morph-mcp`
   servers.
+- Native-shaped `system/init` defaults for `apiKeySource`, `output_style`,
+  `agents`, and `plugins`.
 - MIT license file and package license metadata.
 - GitHub Actions CI workflow for non-live verification.
 - Release metadata and npm publish workflow for both package manifests.
@@ -150,8 +152,10 @@ Agent SDK parity still have documented gaps.
     reconstructed.
   - `model` uses a transcript assistant model only when one is already
     available during session discovery; otherwise it is `"unknown"`.
-  - native fields such as agents, plugins, `apiKeySource`, memory paths, and
-    output style are not fully reconstructed.
+  - `apiKeySource`, `output_style`, `agents`, and `plugins` are emitted with
+    native-shaped defaults, but are not fully reconstructed from the running
+    session.
+  - native fields such as memory paths are not fully reconstructed.
 - `rate_limit_event` is schema-covered from native fixtures but is not
   reconstructed from interactive transcripts.
 - Exact billing parity is not guaranteed:

@@ -382,7 +382,10 @@ test("synthesizes init from transcript metadata when available", () => {
     session_id: "session-1",
     model: "claude-test",
     permissionMode: "auto",
+    apiKeySource: "none",
     claude_code_version: "2.1.140",
+    output_style: "default",
+    agents: [],
     tools: expect.arrayContaining([
       "Task",
       "Read",
@@ -392,6 +395,7 @@ test("synthesizes init from transcript metadata when available", () => {
     mcp_servers: [{ name: "context7", status: "connected" }],
     slash_commands: ["pair-agent", "design-shotgun"],
     skills: ["pair-agent", "design-shotgun"],
+    plugins: [],
   });
 });
 
