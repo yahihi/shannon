@@ -10,7 +10,13 @@
  *   from the executable.
  */
 import { expect, test } from "bun:test";
+import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import {
+  getSessionInfo,
+  getSessionMessages,
+  listSessions,
   optionsToCliArgs,
   parseJsonlStream,
   query,
@@ -33,6 +39,10 @@ import {
 } from "../../sdk";
 
 const streamFixturePath = new URL("../fixtures/claude-p-haiku-stream-json.fixture.jsonl", import.meta.url);
+
+function projectKeyForDir(dir: string): string {
+  return resolve(dir).normalize("NFC").replace(/[^a-zA-Z0-9._-]/g, "-");
+}
 
 test("parses jsonl messages even when chunks split object boundaries", async () => {
   const stream = new ReadableStream<Uint8Array>({
@@ -219,6 +229,63 @@ test("returns a controllable SDK query object", async () => {
   await expect(sdkQuery[Symbol.asyncIterator]().next()).rejects.toThrow(
     "Shannon query aborted before start",
   );
+});
+
+test("reads local Claude session transcripts through SDK helpers", async () => {
+  const home = await mkdtemp(join(tmpdir(), "shannon-sdk-home-"));
+  const dir = "/repo";
+  const sessionId = "session-1";
+  const projectFolder = join(home, ".claude", "projects", projectKeyForDir(dir));
+  const transcriptPath = join(projectFolder, `${sessionId}.jsonl`);
+
+  try {
+    await mkdir(projectFolder, { recursive: true });
+    await Bun.write(
+      transcriptPath,
+      [
+        JSON.stringify({
+          type: "user",
+          timestamp: "2026-05-13T20:00:00.000Z",
+          cwd: dir,
+          sessionId,
+          message: { role: "user", content: "hello" },
+        }),
+        JSON.stringify({
+          type: "assistant",
+          timestamp: "2026-05-13T20:00:01.000Z",
+          cwd: dir,
+          sessionId,
+          message: { role: "assistant", content: [{ type: "text", text: "hi" }] },
+        }),
+      ].join("\n"),
+    );
+
+    await Bun.write(
+      join(projectFolder, "session-2.jsonl"),
+      `${JSON.stringify({
+        type: "user",
+        timestamp: "2026-05-13T19:00:00.000Z",
+        cwd: dir,
+        sessionId: "session-2",
+        message: { role: "user", content: "older" },
+      })}\n`,
+    );
+
+    await expect(getSessionMessages(sessionId, { dir, home })).resolves.toHaveLength(2);
+    await expect(getSessionInfo(sessionId, { dir, home })).resolves.toMatchObject({
+      sessionId,
+      transcriptPath,
+      cwd: dir,
+      createdAt: "2026-05-13T20:00:00.000Z",
+      updatedAt: "2026-05-13T20:00:01.000Z",
+      messageCount: 2,
+    });
+    await expect(listSessions({ dir, home, limit: 1 })).resolves.toMatchObject([
+      { sessionId },
+    ]);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+  }
 });
 
 test("exports zod schemas for the current SDK surface", () => {

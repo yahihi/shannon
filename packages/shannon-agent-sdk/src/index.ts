@@ -1,4 +1,7 @@
 export {
+  getSessionInfo,
+  getSessionMessages,
+  listSessions,
   query,
   parseJsonlStream,
   optionsToCliArgs,
@@ -24,7 +27,10 @@ export {
   shannonUserMessageSchema,
   type QueryOptions,
   type QueryParams,
+  type ListSessionsOptions,
+  type SessionLookupOptions,
   type ShannonMessage,
   type ShannonQuery,
+  type ShannonSessionInfo,
   type ShannonUserMessage,
 } from "@dexh/shannon";

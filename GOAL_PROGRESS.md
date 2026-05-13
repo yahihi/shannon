@@ -63,7 +63,7 @@ Agent SDK parity still have documented gaps.
 ## Verification Performed
 
 - `bun test`
-  - Passes: 36 tests.
+  - Passes: 37 tests.
   - Skips: 11 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
@@ -162,6 +162,8 @@ Agent SDK parity still have documented gaps.
 - SDK `AbortController` support for cancelling the Shannon subprocess.
 - SDK `query()` returns an Agent SDK-like async iterable object with
   `interrupt()` and `close()` methods wired to subprocess cancellation.
+- SDK local session helpers: `getSessionMessages()`, `getSessionInfo()`, and
+  `listSessions()` read Claude transcript files for local session inspection.
 - Zod schemas for current Shannon SDK message rows, native rate-limit event,
   selected additional Agent SDK stream/control variants, option, and query
   parameter validation.
@@ -231,6 +233,8 @@ Agent SDK parity still have documented gaps.
   - custom session stores
   - warm query / prewarmed process behavior
   - custom process spawning
+- SDK session helpers are local transcript-backed only; they do not implement
+  Agent SDK custom `SessionStore` plumbing.
 - full interruption API parity beyond SDK `interrupt()`/`close()` subprocess
   cancellation
 - Full resume/fork semantics still need broader edge-case testing:

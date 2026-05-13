@@ -1,3 +1,4 @@
+import { basename, join, resolve } from "node:path";
 import { z } from "zod";
 
 export type ShannonMessage = Record<string, unknown> & {
@@ -82,6 +83,26 @@ export type QueryParams = {
 export type ShannonQuery = AsyncIterable<ShannonMessage> & {
   interrupt(): Promise<void>;
   close(): void;
+};
+
+export type SessionLookupOptions = {
+  dir?: string;
+  home?: string;
+};
+
+export type ListSessionsOptions = SessionLookupOptions & {
+  limit?: number;
+  offset?: number;
+};
+
+export type ShannonSessionInfo = {
+  sessionId: string;
+  projectFolder: string;
+  transcriptPath: string;
+  cwd?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  messageCount: number;
 };
 
 export const shannonTextBlockSchema = z.object({
@@ -393,6 +414,37 @@ export function query({ prompt, options = {} }: QueryParams): ShannonQuery {
   };
 }
 
+export async function getSessionMessages(
+  sessionId: string,
+  options: SessionLookupOptions = {},
+): Promise<ShannonMessage[]> {
+  const transcriptPath = await transcriptPathForSession(sessionId, options);
+  if (!transcriptPath) return [];
+  return readJsonlFile(transcriptPath);
+}
+
+export async function getSessionInfo(
+  sessionId: string,
+  options: SessionLookupOptions = {},
+): Promise<ShannonSessionInfo | undefined> {
+  const transcriptPath = await transcriptPathForSession(sessionId, options);
+  if (!transcriptPath) return undefined;
+  return sessionInfoFromTranscript(transcriptPath);
+}
+
+export async function listSessions(options: ListSessionsOptions = {}): Promise<ShannonSessionInfo[]> {
+  const infos: ShannonSessionInfo[] = [];
+  for (const transcriptPath of await listTranscriptPaths(options)) {
+    const info = await sessionInfoFromTranscript(transcriptPath);
+    if (info) infos.push(info);
+  }
+
+  infos.sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""));
+  const offset = Math.max(0, options.offset ?? 0);
+  const limit = options.limit === undefined ? undefined : Math.max(0, options.limit);
+  return infos.slice(offset, limit === undefined ? undefined : offset + limit);
+}
+
 export async function* parseJsonlStream(stream: ReadableStream<Uint8Array>): AsyncIterable<ShannonMessage> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
@@ -415,6 +467,85 @@ export async function* parseJsonlStream(stream: ReadableStream<Uint8Array>): Asy
   if (buffer.trim()) {
     yield JSON.parse(buffer) as ShannonMessage;
   }
+}
+
+function projectKeyForDir(dir: string): string {
+  return resolve(dir).normalize("NFC").replace(/[^a-zA-Z0-9._-]/g, "-");
+}
+
+function claudeProjectsRoot(home = Bun.env.HOME ?? ""): string {
+  return join(home, ".claude", "projects");
+}
+
+function claudeProjectFolder(dir: string, home?: string): string {
+  return join(claudeProjectsRoot(home), projectKeyForDir(dir));
+}
+
+async function listTranscriptPaths(options: SessionLookupOptions = {}): Promise<string[]> {
+  if (options.dir) return listTranscriptPathsInFolder(claudeProjectFolder(options.dir, options.home));
+
+  const root = claudeProjectsRoot(options.home);
+  const projects = new Bun.Glob("*");
+  const paths: string[] = [];
+  for await (const project of projects.scan(root)) {
+    const folder = join(root, project);
+    paths.push(...await listTranscriptPathsInFolder(folder));
+  }
+  return paths;
+}
+
+async function listTranscriptPathsInFolder(folder: string): Promise<string[]> {
+  const glob = new Bun.Glob("*.jsonl");
+  const paths: string[] = [];
+  try {
+    for await (const file of glob.scan(folder)) {
+      paths.push(join(folder, file));
+    }
+  } catch {
+    return [];
+  }
+  return paths;
+}
+
+async function transcriptPathForSession(
+  sessionId: string,
+  options: SessionLookupOptions,
+): Promise<string | undefined> {
+  if (options.dir) {
+    const path = join(claudeProjectFolder(options.dir, options.home), `${sessionId}.jsonl`);
+    return await Bun.file(path).exists() ? path : undefined;
+  }
+
+  return (await listTranscriptPaths(options)).find((path) => basename(path) === `${sessionId}.jsonl`);
+}
+
+async function sessionInfoFromTranscript(transcriptPath: string): Promise<ShannonSessionInfo | undefined> {
+  const rows = await readJsonlFile(transcriptPath);
+  const sessionId = basename(transcriptPath).replace(/\.jsonl$/, "");
+  const timestampedRows = rows.filter((row) => typeof row.timestamp === "string");
+  const firstTimestamp = timestampedRows[0]?.timestamp as string | undefined;
+  const lastTimestamp = timestampedRows.at(-1)?.timestamp as string | undefined;
+  const cwd = rows.find((row) => typeof row.cwd === "string")?.cwd as string | undefined;
+
+  return {
+    sessionId,
+    projectFolder: transcriptPath.slice(0, -basename(transcriptPath).length - 1),
+    transcriptPath,
+    cwd,
+    createdAt: firstTimestamp,
+    updatedAt: lastTimestamp,
+    messageCount: rows.length,
+  };
+}
+
+async function readJsonlFile(path: string): Promise<ShannonMessage[]> {
+  const file = Bun.file(path);
+  if (!(await file.exists())) return [];
+  const text = await file.text();
+  return text
+    .split("\n")
+    .filter((line) => line.trim().length > 0)
+    .map((line) => JSON.parse(line) as ShannonMessage);
 }
 
 async function* runQuery(
