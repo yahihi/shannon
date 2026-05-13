@@ -64,7 +64,7 @@ Agent SDK parity still have documented gaps.
 
 - `bun test`
   - Passes: 28 tests.
-  - Skips: 5 live tests unless `SHANNON_LIVE=1`.
+  - Skips: 7 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
 - `bun pm pack --dry-run`
@@ -79,12 +79,13 @@ Agent SDK parity still have documented gaps.
   - `.github/workflows/publish.yml` publishes both packages on GitHub release
     or manual dispatch when `NPM_TOKEN` is configured.
 - `SHANNON_LIVE=1 bun test src/test/learning/shannon-live.test.ts`
-  - Passes: 5 live tests.
+  - Passes: 7 live tests.
   - Covers single-turn stream JSON and finite multi-turn stream JSON in one
     session, incremental stdin turns while stdin remains open, JSON array
     output, nonzero cost fields, reconstructed init tools, text-bearing
-    assistant row selection, resume by session id, session consistency, result
-    turns, metadata, and tmux cleanup.
+    assistant row selection, resume by session id, custom `--session-id`,
+    `--continue`, session consistency, result turns, metadata, and tmux
+    cleanup.
 - Native fixture:
   - `src/test/fixtures/claude-p-haiku-stream-json.fixture.jsonl`
   - `src/test/fixtures/claude-p-haiku-json.fixture.json`
@@ -186,9 +187,9 @@ Agent SDK parity still have documented gaps.
 - full interruption API parity beyond subprocess cancellation
 - Full resume/fork semantics need more live testing:
   - `--resume <session-id>` is live-tested.
-  - `--continue`
+  - `--continue` is live-tested.
+  - `--session-id` is live-tested for a new caller-provided session id.
   - `--fork-session`
-  - `--session-id`
 - Zod schemas cover Shannon's current SDK surface, but not the full Claude
   Agent SDK schema set yet.
 - `@humanlayer/shannon-agent-sdk` exists as a thin facade, but it is not

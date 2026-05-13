@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test } from "bun:test";
+import { randomUUID } from "node:crypto";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -339,6 +340,82 @@ runLive("live Shannon conformance", () => {
     expect(secondMessages.find((message) => message.type === "assistant")).toMatchObject({
       type: "assistant",
       session_id: sessionId,
+    });
+  }, 120_000);
+
+  test("uses a caller-provided session id", async () => {
+    const sessionId = randomUUID();
+    const { stdout, stderr, exitCode } = await runShannonLive([
+      "-p",
+      "Reply with exactly: shannon live custom session",
+      "--session-id",
+      sessionId,
+      "--model",
+      "haiku",
+      "--output-format=stream-json",
+      "--verbose",
+    ]);
+
+    expect(exitCode, stderr).toBe(0);
+    const messages = parseJsonl(stdout);
+    expect(messages.at(-1)).toMatchObject({
+      type: "shannon_session",
+      subtype: "metadata",
+      session_id: sessionId,
+    });
+    expect(messages.find((message) => message.type === "assistant")).toMatchObject({
+      type: "assistant",
+      session_id: sessionId,
+    });
+    expect(messages.find((message) => message.type === "result")).toMatchObject({
+      type: "result",
+      session_id: sessionId,
+      result: "shannon live custom session",
+    });
+  }, 60_000);
+
+  test("continues the most recent conversation in the cwd", async () => {
+    const first = await runShannonLive([
+      "-p",
+      "Reply with exactly: shannon live continue one",
+      "--model",
+      "haiku",
+      "--output-format=stream-json",
+      "--verbose",
+    ]);
+
+    expect(first.exitCode, first.stderr).toBe(0);
+    const firstMessages = parseJsonl(first.stdout);
+    const metadata = firstMessages.at(-1);
+    expect(metadata).toMatchObject({ type: "shannon_session", subtype: "metadata" });
+    const sessionId = metadata?.session_id;
+    expect(typeof sessionId).toBe("string");
+
+    const second = await runShannonLive([
+      "--continue",
+      "-p",
+      "Reply with exactly: shannon live continue two",
+      "--model",
+      "haiku",
+      "--output-format=stream-json",
+      "--verbose",
+    ]);
+
+    expect(second.exitCode, second.stderr).toBe(0);
+    const secondMessages = parseJsonl(second.stdout);
+    expect(secondMessages.at(-1)).toMatchObject({
+      type: "shannon_session",
+      subtype: "metadata",
+      session_id: sessionId,
+    });
+    expect(secondMessages.find((message) => message.type === "assistant")).toMatchObject({
+      type: "assistant",
+      session_id: sessionId,
+    });
+    expect(secondMessages.find((message) => message.type === "result")).toMatchObject({
+      type: "result",
+      session_id: sessionId,
+      result: "shannon live continue two",
     });
   }, 120_000);
 });

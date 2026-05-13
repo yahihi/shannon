@@ -98,6 +98,9 @@ Session/control flags accepted and forwarded to the underlying interactive
 - Resume by explicit session id appends to an existing transcript, so transcript
   discovery must scan existing project transcripts for the submitted prompt row
   with a timestamp after prompt submission.
+- `--continue` also appends to the most recent cwd transcript and uses the same
+  timestamp-bound discovery path. A caller-provided `--session-id` creates a
+  transcript with that id.
 - Interactive transcripts can persist thinking-only assistant rows immediately
   before text rows for the same model response. Shannon waits for a text-bearing
   assistant row before synthesizing `result` to avoid empty results.
