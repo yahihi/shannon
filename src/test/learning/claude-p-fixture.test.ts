@@ -3,6 +3,8 @@ import { expect, test } from "bun:test";
 type JsonRecord = Record<string, unknown>;
 
 const fixturePath = new URL("../fixtures/claude-p-haiku-stream-json.fixture.jsonl", import.meta.url);
+const jsonFixturePath = new URL("../fixtures/claude-p-haiku-json.fixture.json", import.meta.url);
+const textFixturePath = new URL("../fixtures/claude-p-haiku-text.fixture.txt", import.meta.url);
 
 async function readFixture() {
   const text = await Bun.file(fixturePath).text();
@@ -12,11 +14,39 @@ async function readFixture() {
     .map((line) => JSON.parse(line) as JsonRecord);
 }
 
+async function readJsonFixture() {
+  return JSON.parse(await Bun.file(jsonFixturePath).text()) as JsonRecord[];
+}
+
 function keyFor(message: JsonRecord) {
   return message.type === "system"
     ? `${message.type}/${message.subtype}`
     : String(message.type);
 }
+
+test("documents native claude -p text output shape", async () => {
+  expect(await Bun.file(textFixturePath).text()).toBe("shannon fixture text\n");
+});
+
+test("documents native claude -p json output shape", async () => {
+  const messages = await readJsonFixture();
+  expect(messages.map(keyFor)).toEqual([
+    "system/init",
+    "assistant",
+    "assistant",
+    "rate_limit_event",
+    "result",
+  ]);
+
+  const result = messages.at(-1);
+  expect(result).toMatchObject({
+    type: "result",
+    subtype: "success",
+    result: "shannon fixture json",
+    total_cost_usd: expect.any(Number),
+    terminal_reason: "completed",
+  });
+});
 
 test("documents native claude -p stream-json verbose event shape", async () => {
   const messages = await readFixture();

@@ -113,9 +113,9 @@ Session/control flags accepted and forwarded to the underlying interactive
   --verbose` path and finite multi-turn stdin path against the expected JSONL
   contract and verify tmux cleanup.
 - Unit tests cover signal exit-code mapping and pre-start SDK abort behavior.
-- A redacted native `claude -p --model haiku --output-format=stream-json
-  --verbose` fixture captures the current native event family:
-  `hook_started`, `hook_response`, rich `init`, assistant chunks,
+- Redacted native `claude -p --model haiku` fixtures cover `text`, `json`, and
+  `stream-json --verbose`. The stream fixture captures the current native event
+  family: `hook_started`, `hook_response`, rich `init`, assistant chunks,
   `rate_limit_event`, and `result`.
 - Future parity work should add fixtures from native `claude -p` for each flag
   family and assert Shannon either matches the row shape or documents the

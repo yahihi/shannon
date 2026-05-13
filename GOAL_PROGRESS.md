@@ -18,6 +18,7 @@ Full parity means:
 - Added spec scope is tracked: dependency validation, Commander CLI parsing,
   npm package shape, GitHub/npm release work, SDK/schema support, and growing
   conformance tests.
+- after every meaningful change, ensure the tests pass and then add+commit your changes
 
 ## GUIDANCE - HOW TO BUILD PARITY TESTS
 
@@ -57,12 +58,12 @@ Agent SDK parity still have documented gaps.
 | SDK `query()` | `src/sdk.ts` exports async iterable `query()`, JSONL parser, and option mapping. | Partial |
 | Full zod schemas | Zod schemas are exported for the current Shannon SDK messages/options/query params; full Claude Agent SDK schema parity is not complete. | Partial |
 | Every `claude -p` / Agent SDK feature | Broad flags are accepted/forwarded and tests exist, but exact stream fields, callbacks, MCP server objects, session stores, warm queries, and full schemas are incomplete. | Partial |
-| Extensive conformance tests | Unit/learning tests, a native `claude -p` fixture shape test, and env-gated live Shannon tests exist. More fixture cases are still needed. | Partial |
+| Extensive conformance tests | Unit/learning tests, native `claude -p` fixture shape tests, and env-gated live Shannon tests exist. More fixture cases are still needed. | Partial |
 
 ## Verification Performed
 
 - `bun test`
-  - Passes: 19 tests.
+  - Passes: 21 tests.
   - Skips: 2 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
@@ -72,7 +73,10 @@ Agent SDK parity still have documented gaps.
     session, session consistency, result turns, metadata, and tmux cleanup.
 - Native fixture:
   - `src/test/fixtures/claude-p-haiku-stream-json.fixture.jsonl`
-  - Generated once with `claude -p ... --model haiku --output-format=stream-json --verbose`.
+  - `src/test/fixtures/claude-p-haiku-json.fixture.json`
+  - `src/test/fixtures/claude-p-haiku-text.fixture.txt`
+  - Generated once with `claude -p ... --model haiku` and the relevant
+    `--output-format`.
   - Redacted to preserve shape without storing model thinking/signatures or
     machine-specific full tool/plugin inventories.
 - Runtime availability:
@@ -100,7 +104,7 @@ Agent SDK parity still have documented gaps.
 - SDK `AbortController` support for cancelling the Shannon subprocess.
 - Zod schemas for current Shannon SDK message, option, and query parameter
   validation.
-- Native `claude -p` stream-json fixture shape test for Haiku.
+- Native `claude -p` text, json, and stream-json fixture shape tests for Haiku.
 - Live conformance tests for single-turn and finite multi-turn execution.
 - README usage for CLI and SDK.
 
@@ -145,8 +149,8 @@ Agent SDK parity still have documented gaps.
 
 ## Next Steps
 
-1. Expand native `claude -p` fixture conformance tests for `text`, `json`,
-   replayed user messages, and additional hook/tool cases.
+1. Expand native `claude -p` fixture conformance tests for replayed user
+   messages and additional hook/tool cases.
 2. Improve `system/init` reconstruction from transcript/config surfaces and add
    field-level tests.
 3. Research whether interactive transcripts expose rate-limit or exact cost

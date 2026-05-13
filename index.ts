@@ -420,6 +420,7 @@ export async function runShannon(options: CliOptions) {
   let promptCount = 0;
   let cleanupStarted = false;
   let metadataEmitted = false;
+  const jsonMessages: JsonRecord[] = [];
 
   const cleanupOnce = async () => {
     if (cleanupStarted) return cleanup;
@@ -481,12 +482,21 @@ export async function runShannon(options: CliOptions) {
         meta = discovery.meta;
         transcriptRowCount = 0;
 
-        if (options.outputFormat === "stream-json") {
-          for (const row of discovery.rows) {
-            const hookResponse = toSdkHookResponse(row);
-            if (hookResponse) emitJson(hookResponse);
+        for (const row of discovery.rows) {
+          const hookResponse = toSdkHookResponse(row);
+          if (!hookResponse) continue;
+          if (options.outputFormat === "stream-json") {
+            emitJson(hookResponse);
+          } else if (options.outputFormat === "json") {
+            jsonMessages.push(hookResponse);
           }
-          emitJson(toSdkInit(meta, discovery.rows));
+        }
+
+        const init = toSdkInit(meta, discovery.rows);
+        if (options.outputFormat === "stream-json") {
+          emitJson(init);
+        } else if (options.outputFormat === "json") {
+          jsonMessages.push(init);
         }
       }
 
@@ -498,11 +508,20 @@ export async function runShannon(options: CliOptions) {
       );
       transcriptRowCount = assistant.rows.length;
       const result = toSdkResult(assistant.row, startedAt, promptCount);
-      emitOutput(options.outputFormat, [toSdkAssistant(assistant.row), result]);
+      const turnMessages = [toSdkAssistant(assistant.row), result];
+      if (options.outputFormat === "json") {
+        jsonMessages.push(...turnMessages);
+      } else {
+        emitOutput(options.outputFormat, turnMessages);
+      }
     }
 
     if (promptCount === 0) {
       throw new Error("Expected at least one user message on stdin for --input-format=stream-json");
+    }
+
+    if (options.outputFormat === "json") {
+      process.stdout.write(`${JSON.stringify(jsonMessages)}\n`);
     }
   } finally {
     disposeSignalHandlers();

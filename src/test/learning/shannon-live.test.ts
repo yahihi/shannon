@@ -147,4 +147,25 @@ runLive("live Shannon conformance", () => {
       cleanup: { tmux_killed: true },
     });
   }, 120_000);
+
+  test("emits json output as one message array", async () => {
+    const { stdout, stderr, exitCode } = await runShannonLive([
+      "-p",
+      "Reply with exactly: shannon live json",
+      "--model",
+      "haiku",
+      "--output-format=json",
+    ]);
+
+    expect(exitCode, stderr).toBe(0);
+    const messages = JSON.parse(stdout) as JsonRecord[];
+    expect(Array.isArray(messages)).toBe(true);
+    expect(messages.map((message) => message.type)).toContain("system");
+    expect(messages.map((message) => message.type)).toContain("assistant");
+    expect(messages.at(-1)).toMatchObject({
+      type: "result",
+      subtype: "success",
+      num_turns: 1,
+    });
+  }, 60_000);
 });
