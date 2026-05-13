@@ -17,6 +17,8 @@ import {
   mcpServersFromRows,
   modelFromClaudeArgs,
   parseArgs,
+  pluginSourcesFromSkillListing,
+  pluginsFromSkillRows,
   promptFromUserMessage,
   projectKeyForCwd,
   rowContainsPromptAfter,
@@ -222,19 +224,35 @@ test("extracts text from Anthropic content blocks", () => {
 });
 
 test("extracts skill names from interactive skill listings", () => {
-  expect(
-    skillNamesFromListing([
-      "- pair-agent",
-      "- design-shotgun: Design shotgun: generate variants.",
-      "continuation line that should be ignored",
-      "- riptide-rpi:rpi-setup-humanlayer",
-      "- clean-coder:say-hello: Say hello world",
-    ].join("\n")),
-  ).toEqual([
+  const listing = [
+    "- pair-agent",
+    "- design-shotgun: Design shotgun: generate variants. (gstack)",
+    "continuation line that should be ignored",
+    "- riptide-rpi:rpi-setup-humanlayer",
+    "- clean-coder:say-hello: Say hello world",
+    "- browse: Browser automation. (gstack)",
+  ].join("\n");
+
+  expect(skillNamesFromListing(listing)).toEqual([
     "pair-agent",
     "design-shotgun",
     "riptide-rpi:rpi-setup-humanlayer",
     "clean-coder:say-hello",
+    "browse",
+  ]);
+  expect(pluginSourcesFromSkillListing(listing)).toEqual(["gstack"]);
+  expect(
+    pluginsFromSkillRows([
+      {
+        type: "attachment",
+        attachment: {
+          type: "skill_listing",
+          content: listing,
+        },
+      },
+    ]),
+  ).toEqual([
+    { name: "gstack", source: "gstack" },
   ]);
 });
 
@@ -454,7 +472,7 @@ test("synthesizes init from transcript metadata when available", () => {
           type: "attachment",
           attachment: {
             type: "skill_listing",
-            content: "- pair-agent\n- design-shotgun: Design shotgun\n",
+            content: "- pair-agent\n- design-shotgun: Design shotgun (gstack)\n",
           },
         },
         {
@@ -488,7 +506,7 @@ test("synthesizes init from transcript metadata when available", () => {
     mcp_servers: [{ name: "context7", status: "connected" }],
     slash_commands: ["pair-agent", "design-shotgun"],
     skills: ["pair-agent", "design-shotgun"],
-    plugins: [],
+    plugins: [{ name: "gstack", source: "gstack" }],
   });
 });
 

@@ -437,6 +437,7 @@ export function toSdkInit(meta: SessionMetadata, rows: TranscriptRow[]): JsonRec
   const versionedRow = rows.find((row) => typeof row.version === "string");
   const assistantRow = rows.find((row) => typeof row.message?.model === "string");
   const skillNames = skillNamesFromRows(rows);
+  const plugins = pluginsFromSkillRows(rows);
   const mcpServers = mcpServersFromRows(rows);
   const tools = toolsFromMcpServers(mcpServers);
 
@@ -457,7 +458,7 @@ export function toSdkInit(meta: SessionMetadata, rows: TranscriptRow[]): JsonRec
     agents: [],
     slash_commands: skillNames,
     skills: skillNames,
-    plugins: [],
+    plugins,
     uuid: randomUUID(),
   };
 }
@@ -516,6 +517,19 @@ export function skillNamesFromRows(rows: TranscriptRow[]): string[] {
   return [...names];
 }
 
+export function pluginsFromSkillRows(rows: TranscriptRow[]): Array<{ name: string; source: string }> {
+  const plugins = new Map<string, { name: string; source: string }>();
+
+  for (const row of rows) {
+    if (row.attachment?.type !== "skill_listing" || typeof row.attachment.content !== "string") continue;
+    for (const source of pluginSourcesFromSkillListing(row.attachment.content)) {
+      plugins.set(source, { name: source, source });
+    }
+  }
+
+  return [...plugins.values()];
+}
+
 export function skillNamesFromListing(content: string): string[] {
   const names: string[] = [];
 
@@ -527,6 +541,18 @@ export function skillNamesFromListing(content: string): string[] {
   }
 
   return names;
+}
+
+export function pluginSourcesFromSkillListing(content: string): string[] {
+  const sources = new Set<string>();
+
+  for (const line of content.split("\n")) {
+    const match = /^-\s+.+\(([^()]+)\)\s*$/.exec(line);
+    const source = match?.[1]?.trim();
+    if (source) sources.add(source);
+  }
+
+  return [...sources];
 }
 
 export function toSdkResult(row: TranscriptRow, startedAt: number, numTurns = 1): JsonRecord {

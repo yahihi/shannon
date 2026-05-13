@@ -136,6 +136,8 @@ Agent SDK parity still have documented gaps.
   thinking-only transcript chunks do not produce empty synthesized results.
 - `system/init.skills` and `system/init.slash_commands` reconstruction from
   durable interactive `skill_listing` attachments.
+- `system/init.plugins` reconstruction from plugin source markers in durable
+  interactive `skill_listing` attachments when present.
 - `system/init.mcp_servers` reconstruction from durable interactive
   `mcp_instructions_delta` attachments when present.
 - `system/init.model` uses the transcript assistant model when available, or
@@ -193,9 +195,10 @@ Agent SDK parity still have documented gaps.
   - `permissionMode` uses the transcript user row value or requested
     `--permission-mode`, but can still be `"unknown"` if neither source is
     present.
-  - `apiKeySource`, `output_style`, `agents`, and `plugins` are emitted with
-    native-shaped defaults, but are not fully reconstructed from the running
-    session.
+  - `plugins` are reconstructed from skill listing source markers when present,
+    but path/source metadata is still less detailed than native plugin rows.
+  - `apiKeySource`, `output_style`, and `agents` are emitted with native-shaped
+    defaults, but are not fully reconstructed from the running session.
   - native fields such as memory paths are not fully reconstructed.
 - `rate_limit_event` is schema-covered from native fixtures but is not
   reconstructed from interactive transcripts.
