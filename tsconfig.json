@@ -11,6 +11,7 @@
     // Bundler mode
     "moduleResolution": "bundler",
     "paths": {
+      "@dexh/shannon": ["./src/sdk.ts"],
       "@humanlayer/shannon": ["./src/sdk.ts"]
     },
     "allowImportingTsExtensions": true,
