@@ -5,22 +5,22 @@
     "": {
       "name": "@humanlayer/shannon",
       "dependencies": {
-        "@anthropic-ai/claude-agent-sdk": "^0.2.140",
-        "commander": "^14.0.3",
-        "zod": "^4.4.3",
+        "@anthropic-ai/claude-agent-sdk": "0.2.140",
+        "commander": "14.0.3",
+        "zod": "4.4.3",
       },
       "devDependencies": {
-        "@types/bun": "latest",
+        "@types/bun": "1.3.14",
       },
       "peerDependencies": {
-        "typescript": "^5",
+        "typescript": "5.9.3",
       },
     },
     "packages/shannon-agent-sdk": {
       "name": "@dexh/shannon-agent-sdk",
       "version": "0.0.1",
       "dependencies": {
-        "@dexh/shannon": "^0.0.2",
+        "@dexh/shannon": "0.0.2",
       },
     },
   },
