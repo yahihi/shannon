@@ -74,10 +74,11 @@ Agent SDK parity still have documented gaps.
 - `bun run pack:check`
   - Passes package dry-runs for both packages.
 - `bun test src/test/learning/shannon-sdk.test.ts`
-  - Passes: 9 tests.
+  - Passes: 10 tests.
   - Covers SDK query parsing/options/cancellation, local transcript session
-    reads/lists/forks, local subagent reads/lists, local rename/tag/delete
-    mutation helpers, and exported schemas.
+    reads/lists/forks, custom `SessionStore` reads/lists/forks/mutations,
+    local subagent reads/lists, local rename/tag/delete mutation helpers, and
+    exported schemas.
 - `./bin/shannon.mjs -p "Reply with exactly: shannon bin wrapper" --model haiku --output-format=text`
   - Passes and prints `shannon bin wrapper`.
 - `cd examples/hello-world && bun run start`
@@ -177,6 +178,9 @@ Agent SDK parity still have documented gaps.
 - SDK local `listSubagents()` and `getSubagentMessages()` read persisted
   subagent transcripts from Claude's native
   `<project>/<session>/subagents/agent-<id>.jsonl` layout.
+- SDK session inspection and mutation helpers accept custom `SessionStore`
+  adapters for main session reads/lists/forks, subagent reads/lists, and
+  rename/tag/delete operations.
 - Zod schemas for current Shannon SDK message rows, native rate-limit event,
   selected additional Agent SDK stream/control variants, option, and query
   parameter validation.
@@ -246,8 +250,10 @@ Agent SDK parity still have documented gaps.
   - custom session stores
   - warm query / prewarmed process behavior
   - custom process spawning
-- SDK session helpers are local transcript-backed only; they do not implement
-  Agent SDK custom `SessionStore` plumbing, file-history snapshots, subagent
+- SDK custom `SessionStore` support is limited to direct helper calls; Shannon
+  `query()` does not yet mirror live subprocess transcript writes into a custom
+  store.
+- SDK session helpers do not implement file-history snapshots, subagent
   transcript chain reconstruction, or subagent fork semantics.
 - full interruption API parity beyond SDK `interrupt()`/`close()` subprocess
   cancellation

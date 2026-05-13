@@ -42,12 +42,48 @@ import {
   shannonSystemInitSchema,
   shannonUserMessageSchema,
   tagSession,
+  type SessionKey,
+  type SessionStore,
+  type SessionStoreEntry,
 } from "../../sdk";
 
 const streamFixturePath = new URL("../fixtures/claude-p-haiku-stream-json.fixture.jsonl", import.meta.url);
 
 function projectKeyForDir(dir: string): string {
   return resolve(dir).normalize("NFC").replace(/[^a-zA-Z0-9._-]/g, "-");
+}
+
+function memorySessionStore(): SessionStore {
+  const sessions = new Map<string, SessionStoreEntry[]>();
+  const keyString = (key: SessionKey) => `${key.projectKey}/${key.sessionId}/${key.subpath ?? ""}`;
+
+  return {
+    async append(key, entries) {
+      const existing = sessions.get(keyString(key)) ?? [];
+      sessions.set(keyString(key), [...existing, ...entries]);
+    },
+    async load(key) {
+      return sessions.get(keyString(key)) ?? null;
+    },
+    async listSessions(projectKey) {
+      return [...sessions.keys()]
+        .filter((key) => key.startsWith(`${projectKey}/`) && key.endsWith("/"))
+        .map((key) => ({
+          sessionId: key.split("/")[1] ?? "",
+          mtime: 1_778_697_600_000,
+        }));
+    },
+    async delete(key) {
+      sessions.delete(keyString(key));
+    },
+    async listSubkeys(key) {
+      const prefix = `${key.projectKey}/${key.sessionId}/`;
+      return [...sessions.keys()]
+        .filter((storedKey) => storedKey.startsWith(prefix))
+        .map((storedKey) => storedKey.slice(prefix.length))
+        .filter(Boolean);
+    },
+  };
 }
 
 test("parses jsonl messages even when chunks split object boundaries", async () => {
@@ -342,6 +378,73 @@ test("reads local Claude session transcripts through SDK helpers", async () => {
   } finally {
     await rm(home, { recursive: true, force: true });
   }
+});
+
+test("reads and mutates sessions through a custom SessionStore", async () => {
+  const dir = "/repo";
+  const sessionStore = memorySessionStore();
+  const sessionId = "stored-session";
+
+  await sessionStore.append({ projectKey: projectKeyForDir(dir), sessionId }, [
+    {
+      type: "user",
+      timestamp: "2026-05-13T20:00:00.000Z",
+      cwd: dir,
+      sessionId,
+      message: { role: "user", content: "hello" },
+    },
+    {
+      type: "assistant",
+      timestamp: "2026-05-13T20:00:01.000Z",
+      cwd: dir,
+      sessionId,
+      message: { role: "assistant", content: [{ type: "text", text: "hi" }] },
+    },
+  ]);
+  await sessionStore.append(
+    { projectKey: projectKeyForDir(dir), sessionId, subpath: "subagents/agent-worker-1" },
+    [
+      { type: "user", timestamp: "2026-05-13T20:00:02.000Z", sessionId, message: { role: "user", content: "subtask" } },
+      {
+        type: "assistant",
+        timestamp: "2026-05-13T20:00:03.000Z",
+        sessionId,
+        message: { role: "assistant", content: [{ type: "text", text: "done" }] },
+      },
+    ],
+  );
+
+  await expect(getSessionMessages(sessionId, { dir, sessionStore })).resolves.toHaveLength(2);
+  await expect(getSessionInfo(sessionId, { dir, sessionStore })).resolves.toMatchObject({
+    sessionId,
+    cwd: dir,
+    messageCount: 2,
+  });
+  await expect(listSessions({ dir, sessionStore })).resolves.toMatchObject([{ sessionId }]);
+  await expect(listSubagents(sessionId, { dir, sessionStore })).resolves.toEqual(["worker-1"]);
+  await expect(getSubagentMessages(sessionId, "worker-1", { dir, sessionStore, offset: 1 })).resolves.toMatchObject([
+    { type: "assistant", sessionId },
+  ]);
+
+  await expect(forkSession(sessionId, { dir, sessionStore, sessionId: "stored-fork" })).resolves.toEqual({
+    sessionId: "stored-fork",
+  });
+  await expect(getSessionMessages("stored-fork", { dir, sessionStore })).resolves.toMatchObject([
+    { sessionId: "stored-fork" },
+    { sessionId: "stored-fork" },
+  ]);
+
+  await renameSession("stored-fork", "Stored fork", { dir, sessionStore });
+  await tagSession("stored-fork", "stored", { dir, sessionStore });
+  await expect(getSessionMessages("stored-fork", { dir, sessionStore })).resolves.toMatchObject([
+    { sessionId: "stored-fork" },
+    { sessionId: "stored-fork" },
+    { type: "custom-title", customTitle: "Stored fork", sessionId: "stored-fork" },
+    { type: "tag", tag: "stored", sessionId: "stored-fork" },
+  ]);
+
+  await deleteSession("stored-fork", { dir, sessionStore });
+  await expect(getSessionMessages("stored-fork", { dir, sessionStore })).resolves.toEqual([]);
 });
 
 test("exports zod schemas for the current SDK surface", () => {

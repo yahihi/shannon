@@ -90,6 +90,7 @@ export type ShannonQuery = AsyncIterable<ShannonMessage> & {
 export type SessionLookupOptions = {
   dir?: string;
   home?: string;
+  sessionStore?: SessionStore;
 };
 
 export type ListSessionsOptions = SessionLookupOptions & {
@@ -122,6 +123,29 @@ export type ShannonSessionInfo = {
   createdAt?: string;
   updatedAt?: string;
   messageCount: number;
+};
+
+export type SessionKey = {
+  projectKey: string;
+  sessionId: string;
+  subpath?: string;
+};
+
+export type SessionStoreEntry = ShannonMessage;
+
+export type SessionSummaryEntry = {
+  sessionId: string;
+  mtime: number;
+  data: Record<string, unknown>;
+};
+
+export type SessionStore = {
+  append(key: SessionKey, entries: SessionStoreEntry[]): Promise<void>;
+  load(key: SessionKey): Promise<SessionStoreEntry[] | null>;
+  listSessions?(projectKey: string): Promise<Array<{ sessionId: string; mtime: number }>>;
+  listSessionSummaries?(projectKey: string): Promise<SessionSummaryEntry[]>;
+  delete?(key: SessionKey): Promise<void>;
+  listSubkeys?(key: { projectKey: string; sessionId: string }): Promise<string[]>;
 };
 
 export const shannonTextBlockSchema = z.object({
@@ -437,6 +461,10 @@ export async function getSessionMessages(
   sessionId: string,
   options: SessionLookupOptions = {},
 ): Promise<ShannonMessage[]> {
+  if (options.sessionStore) {
+    return await options.sessionStore.load(sessionKey(sessionId, options)) ?? [];
+  }
+
   const transcriptPath = await transcriptPathForSession(sessionId, options);
   if (!transcriptPath) return [];
   return readJsonlFile(transcriptPath);
@@ -446,12 +474,20 @@ export async function getSessionInfo(
   sessionId: string,
   options: SessionLookupOptions = {},
 ): Promise<ShannonSessionInfo | undefined> {
+  if (options.sessionStore) {
+    const rows = await options.sessionStore.load(sessionKey(sessionId, options));
+    if (!rows?.length) return undefined;
+    return sessionInfoFromRows(sessionId, rows, options);
+  }
+
   const transcriptPath = await transcriptPathForSession(sessionId, options);
   if (!transcriptPath) return undefined;
   return sessionInfoFromTranscript(transcriptPath);
 }
 
 export async function listSessions(options: ListSessionsOptions = {}): Promise<ShannonSessionInfo[]> {
+  if (options.sessionStore) return listStoredSessions(options);
+
   const infos: ShannonSessionInfo[] = [];
   for (const transcriptPath of await listTranscriptPaths(options)) {
     const info = await sessionInfoFromTranscript(transcriptPath);
@@ -468,6 +504,18 @@ export async function listSubagents(
   sessionId: string,
   options: ListSubagentsOptions = {},
 ): Promise<string[]> {
+  if (options.sessionStore) {
+    if (!options.sessionStore.listSubkeys) {
+      throw new Error("sessionStore.listSubkeys is not implemented");
+    }
+    const subkeys = await options.sessionStore.listSubkeys(sessionKey(sessionId, options));
+    return subkeys
+      .filter((subkey) => subkey.startsWith("subagents/agent-"))
+      .map((subkey) => subkey.split("/").at(-1)?.replace(/^agent-/, "") ?? "")
+      .filter(Boolean)
+      .sort();
+  }
+
   const subagentsFolder = await subagentsFolderForSession(sessionId, options);
   if (!subagentsFolder) return [];
 
@@ -489,20 +537,36 @@ export async function getSubagentMessages(
   agentId: string,
   options: GetSubagentMessagesOptions = {},
 ): Promise<ShannonMessage[]> {
+  if (options.sessionStore) {
+    const subpath = `subagents/agent-${agentId}`;
+    const rows = await options.sessionStore.load(sessionKey(sessionId, options, subpath)) ?? [];
+    return sliceMessages(rows.filter((row) => row.type === "user" || row.type === "assistant"), options);
+  }
+
   const subagentsFolder = await subagentsFolderForSession(sessionId, options);
   if (!subagentsFolder) return [];
 
   const rows = await readJsonlFile(join(subagentsFolder, `agent-${agentId}.jsonl`));
-  const messages = rows.filter((row) => row.type === "user" || row.type === "assistant");
-  const offset = Math.max(0, options.offset ?? 0);
-  const limit = options.limit === undefined ? undefined : Math.max(0, options.limit);
-  return messages.slice(offset, limit === undefined ? undefined : offset + limit);
+  return sliceMessages(rows.filter((row) => row.type === "user" || row.type === "assistant"), options);
 }
 
 export async function forkSession(
   sessionId: string,
   options: ForkSessionOptions = {},
 ): Promise<ForkSessionResult> {
+  if (options.sessionStore) {
+    const rows = await options.sessionStore.load(sessionKey(sessionId, options));
+    if (!rows?.length) throw new Error(`Session ${sessionId} not found`);
+    const forkSessionId = options.sessionId ?? randomUUID();
+    const existing = await options.sessionStore.load(sessionKey(forkSessionId, options));
+    if (existing?.length) throw new Error(`Fork session ${forkSessionId} already exists`);
+    await options.sessionStore.append(
+      sessionKey(forkSessionId, options),
+      rows.map((row) => rewriteSessionIds(row, forkSessionId)),
+    );
+    return { sessionId: forkSessionId };
+  }
+
   const transcriptPath = await transcriptPathForSession(sessionId, options);
   if (!transcriptPath) throw new Error(`Session ${sessionId} not found`);
 
@@ -524,6 +588,13 @@ export async function renameSession(
   options: SessionMutationOptions = {},
 ): Promise<void> {
   if (!title.trim()) throw new Error("title must be non-empty");
+  if (options.sessionStore) {
+    await options.sessionStore.append(sessionKey(sessionId, options), [
+      transcriptMutationRow(sessionId, "custom-title", { customTitle: title.trim() }),
+    ]);
+    return;
+  }
+
   const transcriptPath = await transcriptPathForSession(sessionId, options);
   if (!transcriptPath) throw new Error(`Session ${sessionId} not found`);
 
@@ -543,6 +614,13 @@ export async function tagSession(
 ): Promise<void> {
   const normalizedTag = tag === null ? "" : tag.trim();
   if (tag !== null && !normalizedTag) throw new Error("tag must be non-empty (use null to clear)");
+  if (options.sessionStore) {
+    await options.sessionStore.append(sessionKey(sessionId, options), [
+      transcriptMutationRow(sessionId, "tag", { tag: normalizedTag }),
+    ]);
+    return;
+  }
+
   const transcriptPath = await transcriptPathForSession(sessionId, options);
   if (!transcriptPath) throw new Error(`Session ${sessionId} not found`);
 
@@ -559,6 +637,11 @@ export async function deleteSession(
   sessionId: string,
   options: SessionMutationOptions = {},
 ): Promise<void> {
+  if (options.sessionStore) {
+    await options.sessionStore.delete?.(sessionKey(sessionId, options));
+    return;
+  }
+
   const transcriptPath = await transcriptPathForSession(sessionId, options);
   if (!transcriptPath) return;
 
@@ -610,6 +693,92 @@ function claudeProjectsRoot(home = Bun.env.HOME ?? ""): string {
 
 function claudeProjectFolder(dir: string, home?: string): string {
   return join(claudeProjectsRoot(home), projectKeyForDir(dir));
+}
+
+function sessionKey(sessionId: string, options: SessionLookupOptions, subpath?: string): SessionKey {
+  return {
+    projectKey: projectKeyForDir(options.dir ?? process.cwd()),
+    sessionId,
+    ...(subpath ? { subpath } : {}),
+  };
+}
+
+function sliceMessages<T>(rows: T[], options: { limit?: number; offset?: number }): T[] {
+  const offset = Math.max(0, options.offset ?? 0);
+  const limit = options.limit === undefined ? undefined : Math.max(0, options.limit);
+  return rows.slice(offset, limit === undefined ? undefined : offset + limit);
+}
+
+async function listStoredSessions(options: ListSessionsOptions): Promise<ShannonSessionInfo[]> {
+  const store = options.sessionStore;
+  if (!store) return [];
+  const projectKey = projectKeyForDir(options.dir ?? process.cwd());
+
+  if (store.listSessionSummaries) {
+    const summaries = await store.listSessionSummaries(projectKey);
+    const infos = summaries.map((summary) => sessionInfoFromSummary(projectKey, summary));
+    return sliceMessages(infos.sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "")), options);
+  }
+
+  if (!store.listSessions) {
+    throw new Error("sessionStore.listSessions is not implemented");
+  }
+
+  const listed = await store.listSessions(projectKey);
+  const infos = await Promise.all(
+    listed.map(async ({ sessionId, mtime }) => {
+      const rows = await store.load({ projectKey, sessionId }) ?? [];
+      return sessionInfoFromRows(sessionId, rows, options, mtime);
+    }),
+  );
+  return sliceMessages(infos.sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "")), options);
+}
+
+function sessionInfoFromSummary(projectKey: string, summary: SessionSummaryEntry): ShannonSessionInfo {
+  return {
+    sessionId: summary.sessionId,
+    projectFolder: projectKey,
+    transcriptPath: `${projectKey}/${summary.sessionId}.jsonl`,
+    updatedAt: new Date(summary.mtime).toISOString(),
+    messageCount: 0,
+  };
+}
+
+function sessionInfoFromRows(
+  sessionId: string,
+  rows: ShannonMessage[],
+  options: SessionLookupOptions,
+  mtime?: number,
+): ShannonSessionInfo {
+  const timestampedRows = rows.filter((row) => typeof row.timestamp === "string");
+  const firstTimestamp = timestampedRows[0]?.timestamp as string | undefined;
+  const lastTimestamp = timestampedRows.at(-1)?.timestamp as string | undefined;
+  const cwd = rows.find((row) => typeof row.cwd === "string")?.cwd as string | undefined;
+  const projectKey = projectKeyForDir(options.dir ?? cwd ?? process.cwd());
+
+  return {
+    sessionId,
+    projectFolder: options.sessionStore ? projectKey : claudeProjectFolder(options.dir ?? cwd ?? process.cwd(), options.home),
+    transcriptPath: options.sessionStore ? `${projectKey}/${sessionId}.jsonl` : "",
+    cwd,
+    createdAt: firstTimestamp,
+    updatedAt: lastTimestamp ?? (mtime === undefined ? undefined : new Date(mtime).toISOString()),
+    messageCount: rows.length,
+  };
+}
+
+function transcriptMutationRow(
+  sessionId: string,
+  type: "custom-title" | "tag",
+  fields: Record<string, unknown>,
+): ShannonMessage {
+  return {
+    type,
+    ...fields,
+    sessionId,
+    uuid: randomUUID(),
+    timestamp: new Date().toISOString(),
+  };
 }
 
 async function listTranscriptPaths(options: SessionLookupOptions = {}): Promise<string[]> {
