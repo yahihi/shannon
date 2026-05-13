@@ -28,6 +28,7 @@ import {
   toSdkHookResponse,
   toSdkHookStarted,
   toSdkInit,
+  toSdkPartialAssistant,
   toSdkResult,
   toShannonMetadata,
   toUserReplay,
@@ -47,6 +48,7 @@ test("parses the target CLI invocation shape", () => {
     outputFormat: "stream-json",
     verbose: true,
     replayUserMessages: false,
+    includePartialMessages: false,
     cwd: "/Users/dex/repos/dexhorthy/shannon",
     pathToClaudeCodeExecutable: undefined,
     claudeArgs: [],
@@ -113,6 +115,13 @@ test("forwards additional Claude interactive session flags", () => {
 test("accepts Claude print output formats", () => {
   expect(parseArgs(["-p", "hello", "--output-format=json"]).outputFormat).toBe("json");
   expect(parseArgs(["-p", "hello", "--output-format=text"]).outputFormat).toBe("text");
+});
+
+test("handles partial message output without forwarding it to interactive Claude", () => {
+  const options = parseArgs(["-p", "hello", "--include-partial-messages"]);
+
+  expect(options.includePartialMessages).toBe(true);
+  expect(options.claudeArgs).not.toContain("--include-partial-messages");
 });
 
 test("accepts stream-json input without a CLI prompt", () => {
@@ -302,6 +311,20 @@ test("translates an interactive assistant row into SDK-ish assistant and result 
     parent_tool_use_id: null,
     session_id: "session-1",
     uuid: "assistant-1",
+  });
+
+  expect(toSdkPartialAssistant(row)).toMatchObject({
+    type: "stream_event",
+    event: {
+      type: "content_block_delta",
+      index: 0,
+      delta: {
+        type: "text_delta",
+        text: "hello from transcript",
+      },
+    },
+    parent_tool_use_id: null,
+    session_id: "session-1",
   });
 
   expect(toSdkResult(row, Date.now())).toMatchObject({

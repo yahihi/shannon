@@ -319,6 +319,35 @@ runLive("live Shannon conformance", () => {
     });
   }, 60_000);
 
+  test("emits synthesized partial stream event when requested", async () => {
+    const { stdout, stderr, exitCode } = await runShannonLive([
+      "-p",
+      "Reply with exactly: shannon live partial",
+      "--model",
+      "haiku",
+      "--output-format=stream-json",
+      "--verbose",
+      "--include-partial-messages",
+    ]);
+
+    expect(exitCode, stderr).toBe(0);
+    const messages = parseJsonl(stdout);
+    const partial = messages.find((message) => message.type === "stream_event");
+    expect(partial).toMatchObject({
+      type: "stream_event",
+      event: {
+        type: "content_block_delta",
+        delta: {
+          type: "text_delta",
+          text: "shannon live partial",
+        },
+      },
+    });
+    expect(textFromMessage(messages.find((message) => message.type === "assistant"))).toBe(
+      "shannon live partial",
+    );
+  }, 60_000);
+
   test("resumes an existing session by id", async () => {
     const first = await runShannonLive([
       "-p",

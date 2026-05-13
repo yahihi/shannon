@@ -63,8 +63,8 @@ Agent SDK parity still have documented gaps.
 ## Verification Performed
 
 - `bun test`
-  - Passes: 34 tests.
-  - Skips: 10 live tests unless `SHANNON_LIVE=1`.
+  - Passes: 35 tests.
+  - Skips: 11 live tests unless `SHANNON_LIVE=1`.
 - `bun run typecheck`
   - Passes.
 - `bun pm pack --dry-run`
@@ -89,14 +89,15 @@ Agent SDK parity still have documented gaps.
   - `.github/workflows/publish.yml` publishes both packages on GitHub release
     or manual dispatch when `NPM_TOKEN` is configured.
 - `SHANNON_LIVE=1 bun test src/test/learning/shannon-live.test.ts`
-  - Passes: 10 live tests.
+  - Passes: 11 live tests.
   - Covers single-turn stream JSON and finite multi-turn stream JSON in one
     session, incremental stdin turns while stdin remains open, JSON array
     output, nonzero cost fields, reconstructed init tools, text-bearing
     assistant row selection, resume by session id, custom `--session-id`,
     `--continue`, `--fork-session` with a caller-provided fork session id,
-    SDK `query()` custom session id, resume, continue, and fork, session
-    consistency, result turns, metadata, and tmux cleanup.
+    synthesized partial stream events, SDK `query()` custom session id, resume,
+    continue, and fork, session consistency, result turns, metadata, and tmux
+    cleanup.
 - Native fixture:
   - `src/test/fixtures/claude-p-haiku-stream-json.fixture.jsonl`
   - `src/test/fixtures/claude-p-haiku-json.fixture.json`
@@ -143,6 +144,9 @@ Agent SDK parity still have documented gaps.
   available, or the requested `--permission-mode` value before that row exposes
   it.
 - synthesized `system/hook_started` rows before translated hook responses.
+- synthesized `stream_event` partial assistant rows from the final assistant
+  text when `--include-partial-messages` is requested; the flag is handled by
+  Shannon instead of being forwarded to interactive Claude.
 - synthesized init/result rows and Shannon metadata row.
 - approximate model/token cost reconstruction for known Claude model families.
 - SDK facade with `query()`, async iterable stdout parsing, string prompts,
@@ -200,8 +204,9 @@ Agent SDK parity still have documented gaps.
     token usage for known Claude model families.
   - Pricing is based on the native Haiku fixture and current Anthropic API
     pricing table, not a persisted exact bill row in interactive transcripts.
-- `--include-partial-messages` is accepted/forwarded but partial message stream
-  rows are not synthesized from interactive transcripts.
+- `--include-partial-messages` emits synthesized full-text partial
+  `stream_event` rows, but does not provide true token-by-token native deltas
+  because interactive transcripts do not persist those chunks.
 - Hook lifecycle parity is partial:
   - `hook_started` is synthesized from durable `hook_success` attachments.
   - `hook_response` is translated from durable `hook_success` attachments.

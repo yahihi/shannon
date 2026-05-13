@@ -12,6 +12,7 @@ type CliOptions = {
   outputFormat: OutputFormat;
   verbose: boolean;
   replayUserMessages: boolean;
+  includePartialMessages: boolean;
   cwd: string;
   pathToClaudeCodeExecutable?: string;
   claudeArgs: string[];
@@ -231,6 +232,7 @@ export function parseArgs(argv: string[], cwd = process.cwd()): CliOptions {
     outputFormat,
     verbose: parsed.verbose,
     replayUserMessages: parsed.replayUserMessages === true,
+    includePartialMessages: parsed.includePartialMessages === true,
     cwd: resolve(cwd),
     pathToClaudeCodeExecutable: typeof parsed.pathToClaudeCodeExecutable === "string"
       ? parsed.pathToClaudeCodeExecutable
@@ -282,7 +284,6 @@ export function buildClaudeArgs(parsed: Record<string, unknown>): string[] {
   addOptionalString(args, "--from-pr", parsed.fromPr);
   addBoolean(args, "--ide", parsed.ide);
   addBoolean(args, "--include-hook-events", parsed.includeHookEvents);
-  addBoolean(args, "--include-partial-messages", parsed.includePartialMessages);
   addString(args, "--json-schema", parsed.jsonSchema);
   addString(args, "--max-budget-usd", parsed.maxBudgetUsd);
   addRepeated(args, "--mcp-config", parsed.mcpConfig);
@@ -372,6 +373,27 @@ export function toSdkAssistant(row: TranscriptRow): JsonRecord {
     parent_tool_use_id: row.parent_tool_use_id ?? null,
     session_id: row.sessionId ?? row.session_id,
     uuid: row.uuid,
+  };
+}
+
+export function toSdkPartialAssistant(row: TranscriptRow): JsonRecord | undefined {
+  const text = textFromContent(row.message?.content);
+  const sessionId = row.sessionId ?? row.session_id;
+  if (!text || !sessionId) return undefined;
+
+  return {
+    type: "stream_event",
+    event: {
+      type: "content_block_delta",
+      index: 0,
+      delta: {
+        type: "text_delta",
+        text,
+      },
+    },
+    parent_tool_use_id: row.parent_tool_use_id ?? null,
+    session_id: sessionId,
+    uuid: randomUUID(),
   };
 }
 
@@ -763,7 +785,12 @@ export async function runShannon(options: CliOptions) {
       );
       transcriptRowCount = assistant.rows.length;
       const result = toSdkResult(assistant.row, startedAt, promptCount);
-      const turnMessages = [toSdkAssistant(assistant.row), result];
+      const partial = options.includePartialMessages ? toSdkPartialAssistant(assistant.row) : undefined;
+      const turnMessages = [
+        ...(partial ? [partial] : []),
+        toSdkAssistant(assistant.row),
+        result,
+      ];
       if (options.outputFormat === "json") {
         jsonMessages.push(...turnMessages);
       } else {
