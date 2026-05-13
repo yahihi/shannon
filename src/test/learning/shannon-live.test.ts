@@ -59,6 +59,8 @@ runLive("live Shannon conformance", () => {
     const { stdout, stderr, exitCode } = await runShannonLive([
       "-p",
       "Reply with exactly: shannon live one",
+      "--model",
+      "haiku",
       "--output-format=stream-json",
       "--verbose",
     ]);
@@ -113,6 +115,8 @@ runLive("live Shannon conformance", () => {
     const { stdout, stderr, exitCode } = await runShannonLive(
       [
         "--input-format=stream-json",
+        "--model",
+        "haiku",
         "--output-format=stream-json",
         "--verbose",
         "--replay-user-messages",

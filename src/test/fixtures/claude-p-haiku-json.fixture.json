@@ -1,0 +1,126 @@
+[
+  {
+    "type": "system",
+    "subtype": "init",
+    "cwd": "/repo",
+    "session_id": "session-1",
+    "tools": ["Task", "Bash", "Read", "Write"],
+    "mcp_servers": [{ "name": "context7", "status": "connected" }],
+    "model": "claude-haiku-4-5-20251001",
+    "permissionMode": "default",
+    "slash_commands": ["init", "review"],
+    "apiKeySource": "none",
+    "claude_code_version": "2.1.140",
+    "output_style": "default",
+    "agents": ["claude", "Explore"],
+    "skills": ["code-research"],
+    "plugins": [{ "name": "example-plugin", "path": "/redacted/plugin", "source": "example-plugin@example" }],
+    "analytics_disabled": false,
+    "uuid": "uuid-init",
+    "memory_paths": { "auto": "/repo/.claude/memory/" },
+    "fast_mode_state": "off"
+  },
+  {
+    "type": "assistant",
+    "message": {
+      "model": "claude-haiku-4-5-20251001",
+      "id": "msg-1",
+      "type": "message",
+      "role": "assistant",
+      "content": [{ "type": "thinking", "thinking": "redacted", "signature": "redacted" }],
+      "stop_reason": null,
+      "stop_sequence": null,
+      "stop_details": null,
+      "usage": {
+        "input_tokens": 10,
+        "cache_creation_input_tokens": 100,
+        "cache_read_input_tokens": 20,
+        "output_tokens": 7,
+        "service_tier": "standard",
+        "inference_geo": "not_available"
+      },
+      "context_management": null
+    },
+    "parent_tool_use_id": null,
+    "session_id": "session-1",
+    "uuid": "uuid-assistant-thinking"
+  },
+  {
+    "type": "assistant",
+    "message": {
+      "model": "claude-haiku-4-5-20251001",
+      "id": "msg-1",
+      "type": "message",
+      "role": "assistant",
+      "content": [{ "type": "text", "text": "shannon fixture json" }],
+      "stop_reason": null,
+      "stop_sequence": null,
+      "stop_details": null,
+      "usage": {
+        "input_tokens": 10,
+        "cache_creation_input_tokens": 100,
+        "cache_read_input_tokens": 20,
+        "output_tokens": 7,
+        "service_tier": "standard",
+        "inference_geo": "not_available"
+      },
+      "context_management": null
+    },
+    "parent_tool_use_id": null,
+    "session_id": "session-1",
+    "uuid": "uuid-assistant-text"
+  },
+  {
+    "type": "rate_limit_event",
+    "rate_limit_info": {
+      "status": "allowed",
+      "resetsAt": 1778709000,
+      "rateLimitType": "five_hour",
+      "overageStatus": "rejected",
+      "overageDisabledReason": "org_level_disabled",
+      "isUsingOverage": false
+    },
+    "uuid": "uuid-rate-limit",
+    "session_id": "session-1"
+  },
+  {
+    "type": "result",
+    "subtype": "success",
+    "is_error": false,
+    "api_error_status": null,
+    "duration_ms": 2093,
+    "duration_api_ms": 2023,
+    "num_turns": 1,
+    "result": "shannon fixture json",
+    "stop_reason": "end_turn",
+    "session_id": "session-1",
+    "total_cost_usd": 0.0163831,
+    "usage": {
+      "input_tokens": 10,
+      "cache_creation_input_tokens": 100,
+      "cache_read_input_tokens": 20,
+      "output_tokens": 51,
+      "server_tool_use": { "web_search_requests": 0, "web_fetch_requests": 0 },
+      "service_tier": "standard",
+      "inference_geo": "",
+      "iterations": [{ "input_tokens": 10, "output_tokens": 51, "type": "message" }],
+      "speed": "standard"
+    },
+    "modelUsage": {
+      "claude-haiku-4-5-20251001": {
+        "inputTokens": 10,
+        "outputTokens": 51,
+        "cacheReadInputTokens": 20,
+        "cacheCreationInputTokens": 100,
+        "webSearchRequests": 0,
+        "costUSD": 0.0163831,
+        "contextWindow": 200000,
+        "maxOutputTokens": 32000
+      }
+    },
+    "permission_denials": [],
+    "terminal_reason": "completed",
+    "fast_mode_state": "off",
+    "uuid": "uuid-result"
+  }
+]
