@@ -1024,8 +1024,16 @@ async function waitForPrompt(tmuxSession: string) {
 
   while (Date.now() - startedAt < START_TIMEOUT_MS) {
     const pane = await runCommand(["tmux", "capture-pane", "-pt", tmuxSession, "-S", "-40"]);
-    // Auto-accept workspace trust dialog
-    if (pane.stdout.includes("trust this folder") || pane.stdout.includes("Enter to confirm")) {
+    // Auto-accept workspace trust dialog ("❯ 1. Yes, I trust this folder")
+    if (pane.stdout.includes("trust this folder")) {
+      await runCommand(["tmux", "send-keys", "-t", tmuxSession, "Enter"]);
+      await sleep(POLL_MS * 5);
+      continue;
+    }
+    // Auto-accept bypass-permissions warning ("❯ 1. No, exit" / "2. Yes, I accept")
+    if (pane.stdout.includes("Bypass Permissions mode") || pane.stdout.includes("Yes, I accept")) {
+      await runCommand(["tmux", "send-keys", "-t", tmuxSession, "Down"]);
+      await sleep(POLL_MS);
       await runCommand(["tmux", "send-keys", "-t", tmuxSession, "Enter"]);
       await sleep(POLL_MS * 5);
       continue;
