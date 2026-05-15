@@ -1047,8 +1047,12 @@ async function waitForPrompt(tmuxSession: string) {
 }
 
 async function sendPrompt(tmuxSession: string, prompt: string) {
-  await runCommand(["tmux", "set-buffer", "-b", `shannon-${tmuxSession}`, prompt]);
+  // Use bracketed paste mode so newlines are treated as literal characters
+  // rather than Enter keypresses. This keeps multi-line prompts as one message.
+  const bracketed = `\x1b[200~${prompt}\x1b[201~`;
+  await runCommand(["tmux", "set-buffer", "-b", `shannon-${tmuxSession}`, bracketed]);
   await runCommand(["tmux", "paste-buffer", "-b", `shannon-${tmuxSession}`, "-t", tmuxSession]);
+  await sleep(200);
   await runCommand(["tmux", "send-keys", "-t", tmuxSession, "C-m"]);
 }
 
