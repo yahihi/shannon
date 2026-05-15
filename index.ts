@@ -768,7 +768,6 @@ export async function runShannon(options: CliOptions) {
       throw new Error("Expected at least one user message on stdin for --input-format=stream-json");
     }
 
-    const firstPromptSentAt = Date.now();
     await runCommand([
       "tmux",
       "new-session",
@@ -779,18 +778,14 @@ export async function runShannon(options: CliOptions) {
       options.cwd,
       runtime.claude,
       ...options.claudeArgs,
-      prompt,
     ]);
 
-    let launchedWithPrompt = true;
     while (prompt) {
       promptCount += 1;
 
-      const promptSentAt = launchedWithPrompt ? firstPromptSentAt : Date.now();
-      if (!launchedWithPrompt) {
-        await waitForPrompt(tmuxSession);
-        await sendPrompt(tmuxSession, prompt);
-      }
+      const promptSentAt = Date.now();
+      await waitForPrompt(tmuxSession);
+      await sendPrompt(tmuxSession, prompt);
 
       if (options.replayUserMessages && options.outputFormat === "stream-json") {
         emitJson(toUserReplay(prompt));
@@ -859,7 +854,6 @@ export async function runShannon(options: CliOptions) {
         emitOutput(options.outputFormat, turnMessages);
       }
 
-      launchedWithPrompt = false;
       prompt = await nextPrompt(promptIterator);
     }
 
